@@ -1,0 +1,10 @@
+{
+  "description": "Explore Kyrgyz cultural heritage through an interactive digital museum featuring a clickable yurt diagram, traditional rituals, and educational content about Kyrgyzstan's folklore and customs.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
