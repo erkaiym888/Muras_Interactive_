@@ -1,9 +1,9 @@
 import { FormEvent, ReactNode, useState } from 'react'
-import { photos, traditions, yurtParts } from './data'
+import { photos, traditions } from './data'
 import AuthenticYurtDiagram from './AuthenticYurtDiagram'
+import { PartKey, partKeys, YURT_IMAGE, yurtParts, yurtSize } from './yurt'
 
 type Page = 'home' | 'yurt' | 'yurt-detail' | 'traditions' | 'tradition-detail' | 'login' | 'register' | 'recover'
-type PartKey = keyof typeof yurtParts
 
 const Arrow = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 6l6 6-6 6"/></svg>
 const Eye = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
@@ -49,35 +49,46 @@ function Home({ go }: { go: (p: Page) => void }) {
   </main>
 }
 
-function YurtDiagram({ selected, select }: { selected: PartKey; select: (p: PartKey) => void }) {
-  return <div className="diagram-wrap"><svg className="yurt-svg" viewBox="0 0 800 570" role="img" aria-label="Интерактивная схема кыргызской юрты">
-    <defs><linearGradient id="felt" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#f4ead7"/><stop offset="1" stopColor="#d6b981"/></linearGradient></defs>
-    <path d="M120 450 Q130 180 400 115 Q670 180 680 450Z" fill="url(#felt)" stroke="#652d32" strokeWidth="5"/>
-    <path d="M160 450V300M210 450V252M260 450V215M310 450V180M490 180V450M540 215V450M590 252V450M640 300V450" fill="none" stroke="#9c643c" strokeWidth="6" opacity=".7"/>
-    <g onClick={() => select('uuk')} className={selected==='uuk'?'hot active':'hot'}><path d="M165 300L400 135M230 235L400 135M305 183L400 135M635 300L400 135M570 235L400 135M495 183L400 135" fill="none" stroke="#7e3b31" strokeWidth="7"/><circle cx="560" cy="230" r="18"/><text x="588" y="236">Уук</text></g>
-    <g onClick={() => select('tunduk')} className={selected==='tunduk'?'hot active':'hot'}><ellipse cx="400" cy="132" rx="80" ry="28" fill="#d8bd91" stroke="#652d32" strokeWidth="9"/><path d="M340 132h120M360 115v34M385 106v52M415 106v52M440 115v34" stroke="#652d32" strokeWidth="4"/><circle cx="400" cy="83" r="18"/><text x="430" y="90">Түндүк</text></g>
-    <g onClick={() => select('kerege')} className={selected==='kerege'?'hot active':'hot'}><path d="M145 330l130 120m-120-165 175 165M645 285L470 450m185-120L525 450M145 450l130-120m-120 120 175-165M655 450L525 330m120 120L470 285" stroke="#a65b40" strokeWidth="4" fill="none"/><circle cx="150" cy="380" r="18"/><text x="45" y="386">Кереге</text></g>
-    <g onClick={() => select('shyrdak')} className={selected==='shyrdak'?'hot active':'hot'}><ellipse cx="400" cy="472" rx="220" ry="50" fill="#652d32"/><path d="M240 472q40-45 80 0t80 0 80 0 80 0" stroke="#d8bd91" strokeWidth="16" fill="none"/><circle cx="400" cy="500" r="18"/><text x="430" y="510">Шырдак</text></g>
-    <path d="M340 450V320q60-45 120 0v130" fill="#4a201f" stroke="#d8bd91" strokeWidth="5"/><path d="M400 325v125" stroke="#d8bd91" strokeWidth="3"/>
-  </svg><div className="drag-hint">Нажмите на отмеченный элемент</div></div>
+function Lens({ k, className = 'lens' }: { k: PartKey; className?: string }) {
+  const z = 3.2, part = yurtParts[k]
+  const pos = (v: number) => Math.min(1, Math.max(0, (v * z - .5) / (z - 1)))
+  const px = pos(part.x), py = pos(part.y)
+  const mx = (part.x * z - px * (z - 1)) * 100, my = (part.y * z - py * (z - 1)) * 100
+  return <div className={className} role="img" aria-label={`Фрагмент юрты: ${part.name}`}
+    style={{ backgroundImage: `url(${YURT_IMAGE})`, backgroundSize: `${z * 100}% auto`, backgroundPosition: `${px * 100}% ${py * 100}%` }}>
+    <i style={{ left: `${mx}%`, top: `${my}%` }}/>
+  </div>
 }
 
-function Yurt({ go }: { go: (p: Page) => void }) {
-  const [selected, setSelected] = useState<PartKey>('tunduk')
+function Yurt({ go, selected, setSelected }: { go: (p: Page) => void; selected: PartKey; setSelected: (k: PartKey) => void }) {
   const [panelOpen, setPanelOpen] = useState(true)
   const part = yurtParts[selected]
-  return <main className="museum-page"><div className="page-title"><p className="kicker">ИНТЕРАКТИВНАЯ ЭКСПОЗИЦИЯ · 01</p><h1>Внутри кыргызской <i>юрты</i></h1><p>Выберите элемент на схеме, чтобы узнать его устройство, назначение и символическое значение.</p></div>
-    <section className="exhibit"><div className="exhibit-stage"><div className="stage-top"><span>БОЗ ҮЙ · АРХИТЕКТУРА</span><span>5 ОБЪЕКТОВ</span></div><AuthenticYurtDiagram selected={selected} select={(key)=>{setSelected(key);setPanelOpen(true)}}/></div>
-      <aside className={panelOpen?'info-panel':'info-panel panel-closed'}><button className="close" onClick={()=>setPanelOpen(false)} aria-label="Закрыть">×</button>{panelOpen?<><p className="kicker">{part.eyebrow}</p><h2>{part.name}</h2><p className="info-intro">{part.description}</p><img src={part.image} alt={part.name}/>
-        <dl><div><dt>Назначение</dt><dd>{part.purpose}</dd></div><div><dt>Культурное значение</dt><dd>{part.meaning}</dd></div><div><dt>Связанные элементы</dt><dd>{part.related}</dd></div></dl>
-        <Button onClick={() => go('yurt-detail')}>Подробнее об элементе</Button></>:<button className="reopen-panel" onClick={()=>setPanelOpen(true)}>Открыть карточку<br/><b>{part.name}</b></button>}
+  const idx = partKeys.indexOf(selected)
+  const pick = (k: PartKey) => { setSelected(k); setPanelOpen(true) }
+  const step = (d: number) => pick(partKeys[(idx + d + partKeys.length) % partKeys.length])
+  const byName = (name: string) => partKeys.find(k => yurtParts[k].name === name)
+  return <main className="museum-page"><div className="page-title"><p className="kicker">ИНТЕРАКТИВНАЯ ЭКСПОЗИЦИЯ · 01</p><h1>Внутри кыргызской <i>юрты</i></h1><p>Нажмите на точку на схеме, чтобы узнать устройство, назначение и смысл каждого элемента боз үй.</p></div>
+    <section className="exhibit"><div className="exhibit-stage"><div className="stage-top"><span>БОЗ ҮЙ · ОСНОВНЫЕ ЭЛЕМЕНТЫ КОНСТРУКЦИИ</span><span>{String(part.no).padStart(2, '0')} / {partKeys.length}</span></div>
+      <AuthenticYurtDiagram selected={selected} select={pick}/>
+      <div className="size-strip"><p>{yurtSize.title}</p><div><span>Высота в центре<b>{yurtSize.height}</b></span><span>Высота кереге<b>{yurtSize.keregeHeight}</b></span><span>Диаметр<b>{yurtSize.diameter}</b></span></div></div>
+    </div>
+      <aside className={panelOpen ? 'info-panel' : 'info-panel panel-closed'} aria-live="polite"><button className="close" onClick={() => setPanelOpen(false)} aria-label="Закрыть">×</button>{panelOpen ? <>
+        <p className="kicker"><span className="no">{String(part.no).padStart(2, '0')}</span>{part.group} · {part.eyebrow}</p><h2>{part.name}</h2><p className="info-intro">{part.description}</p>
+        <Lens k={selected}/>
+        <dl><div><dt>Назначение</dt><dd>{part.purpose}</dd></div><div><dt>Культурное значение</dt><dd>{part.meaning}</dd></div><div><dt>Связанные элементы</dt><dd className="chips">{part.related.map(r => { const k = byName(r); return k ? <button key={r} onClick={() => pick(k)}>{r}</button> : <span key={r}>{r}</span> })}</dd></div></dl>
+        <div className="panel-nav"><button onClick={() => step(-1)} aria-label="Предыдущий элемент">←</button><Button onClick={() => go('yurt-detail')}>Подробнее об элементе</Button><button onClick={() => step(1)} aria-label="Следующий элемент">→</button></div></>
+        : <button className="reopen-panel" onClick={() => setPanelOpen(true)}>Открыть карточку<br/><b>{part.name}</b></button>}
       </aside></section>
-    <div className="part-tabs">{(Object.keys(yurtParts) as PartKey[]).map((key,i)=><button className={selected===key?'active':''} onClick={()=>{setSelected(key);setPanelOpen(true)}} key={key}><span>0{i+1}</span>{yurtParts[key].name}</button>)}</div>
   </main>
 }
 
-function YurtDetail({ go }: { go: (p: Page) => void }) {
-  return <main className="article-page"><button className="back" onClick={()=>go('yurt')}>← Вернуться к экспозиции</button><div className="article-hero"><img src={photos.yurt} alt="Кыргызская юрта"/><div><p className="kicker">ЭЛЕМЕНТ ЮРТЫ · КУПОЛ</p><h1>Түндүк</h1><p>Круг света над домом</p></div></div><div className="article-body"><aside><b>КЫРГЫЗСКОЕ НАЗВАНИЕ</b><strong>Түндүк</strong><span>Произношение: түн-дүк</span></aside><article><p className="big">Түндүк — центральная круглая часть свода юрты. В неё вставляются верхние концы ууков, образуя устойчивый купол.</p><h2>Назначение и устройство</h2><p>Мастера изготавливают түндүк из прочной древесины, тщательно выгибая обод и скрепляя перекладины. Отверстие даёт свет, обеспечивает вентиляцию и служит дымоходом для очага.</p><h2>Символ дома и мира</h2><p>Снизу түндүк напоминает солнце: обод читается как граница мира, а перекладины — как его лучи. Он передаётся в семье и становится знаком преемственности поколений. Изображение түндүк занимает центр государственного флага Кыргызстана.</p><div className="materials"><b>Связанные материалы</b><span>Древесина</span><span>Кожаные ремни</span><span>Войлок</span></div></article></div></main>
+function YurtDetail({ go, selected }: { go: (p: Page) => void; selected: PartKey }) {
+  const part = yurtParts[selected]
+  return <main className="article-page"><button className="back" onClick={() => go('yurt')}>← Вернуться к экспозиции</button>
+    <div className="article-hero detail-hero"><Lens k={selected} className="lens hero-lens"/><div><p className="kicker">ЭЛЕМЕНТ ЮРТЫ · {part.group.toUpperCase()}</p><h1>{part.name}</h1><p>{part.eyebrow}</p></div></div>
+    <div className="article-body"><aside><b>КЫРГЫЗСКОЕ НАЗВАНИЕ</b><strong>{part.name}</strong><span>Элемент {part.no} из {partKeys.length}</span></aside>
+      <article><p className="big">{part.description}</p><h2>Назначение и устройство</h2><p>{part.purpose}</p><h2>Культурное значение</h2><p>{part.meaning}</p>
+        <div className="materials"><b>Связанные элементы</b>{part.related.map(r => <span key={r}>{r}</span>)}</div></article></div></main>
 }
 
 function Traditions({ go }: { go: (p: Page) => void }) {
@@ -109,8 +120,9 @@ function Auth({ mode, go }: { mode: 'login'|'register'|'recover'; go: (p: Page) 
 
 export default function App() {
   const [page,setPage]=useState<Page>('home')
+  const [part,setPart]=useState<PartKey>('tunduk')
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
-  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go}/>:page==='yurt-detail'?<YurtDetail go={go}/>:page==='traditions'?<Traditions go={go}/>:page==='tradition-detail'?<TraditionDetail go={go}/>:<Auth mode={page as 'login'|'register'|'recover'} go={go}/>
+  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions go={go}/>:page==='tradition-detail'?<TraditionDetail go={go}/>:<Auth mode={page as 'login'|'register'|'recover'} go={go}/>
   const auth=['login','register','recover'].includes(page)
   return <div>{!auth&&<Header page={page} go={go}/>} {content} {!auth&&<Footer go={go}/>}</div>
 }
