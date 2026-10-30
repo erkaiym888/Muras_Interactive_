@@ -1,47 +1,69 @@
-import { useState } from 'react'
+import { KeyboardEvent, useState } from 'react'
+import { PartKey, partKeys, YURT_IMAGE, yurtParts, yurtSize } from './yurt'
 
-type Part = 'tunduk' | 'uuk' | 'kerege' | 'eshik' | 'shyrdak'
+// Холст схемы: изображение 1000×731 со смещением, вокруг — поля для размерных линий
+const OX = 80, OY = 24, IW = 1000, IH = 731, VW = 1150, VH = 815
+const sx = (x: number) => OX + x * IW
+const sy = (y: number) => OY + y * IH
 
-export default function AuthenticYurtDiagram({ selected, select }: { selected: Part; select: (part: Part) => void }) {
-  const [view, setView] = useState<'exterior' | 'structure'>('exterior')
-  const state = (part: Part) => selected === part ? 'hot svg-part active' : 'hot svg-part'
-
-  return <div className="diagram-wrap">
-    <div className="view-tabs" role="tablist" aria-label="Вид юрты">
-      <button role="tab" aria-selected={view === 'exterior'} className={view === 'exterior' ? 'active' : ''} onClick={() => setView('exterior')}>Внешний вид</button>
-      <button role="tab" aria-selected={view === 'structure'} className={view === 'structure' ? 'active' : ''} onClick={() => setView('structure')}>Конструкция</button>
-    </div>
-    {view === 'exterior' ? <svg className="yurt-svg authentic-yurt" viewBox="0 0 900 590" role="img" aria-label="Внешний вид традиционной кыргызской боз үй">
-      <image href="/yurt-exterior.svg" x="15" y="5" width="870" height="580" preserveAspectRatio="xMidYMid meet"/>
-      <g onClick={() => select('tunduk')} className={state('tunduk')} aria-label="Түндүк">
-        <ellipse cx="450" cy="128" rx="95" ry="58" fill="transparent"/>
-      </g>
-      <g onClick={() => select('uuk')} className={state('uuk')} aria-label="Уук">
-        <path d="M145 350Q205 185 450 125Q695 185 755 350" fill="none" stroke="transparent" strokeWidth="105"/>
-      </g>
-      <g onClick={() => select('eshik')} className={state('eshik')} aria-label="Эшик">
-        <rect x="374" y="330" width="152" height="218" fill="transparent"/>
-      </g>
-    </svg> : <svg className="yurt-svg authentic-yurt" viewBox="0 0 900 590" role="img" aria-label="Деревянная конструкция традиционной кыргызской боз үй">
-      <image href="/yurt-structure.svg" x="15" y="5" width="870" height="580" preserveAspectRatio="xMidYMid meet"/>
-      <g onClick={() => select('tunduk')} className={state('tunduk')} aria-label="Түндүк">
-        <ellipse cx="450" cy="120" rx="100" ry="62" fill="transparent"/>
-      </g>
-      <g onClick={() => select('uuk')} className={state('uuk')} aria-label="Уук">
-        <path d="M140 350Q205 178 450 116Q695 178 760 350" fill="none" stroke="transparent" strokeWidth="110"/>
-      </g>
-      <g onClick={() => select('kerege')} className={state('kerege')} aria-label="Кереге">
-        <path d="M105 342H367V545H105ZM533 342H795V545H533Z" fill="transparent"/>
-      </g>
-      <g onClick={() => select('eshik')} className={state('eshik')} aria-label="Эшик">
-        <rect x="367" y="325" width="166" height="225" fill="transparent"/>
-      </g>
-    </svg>}
-    <div className="interior-access"><button onClick={() => select('shyrdak')} className={selected === 'shyrdak' ? 'active' : ''}><span className="shyrdak-swatch"/>Интерьер: Шырдак</button><span>Ковёр расположен внутри юрты</span></div>
-    <div className="drag-hint">Нажмите на элемент конструкции или подпись</div>
-  </div>
+function Hotspot({ k, active, select }: { k: PartKey; active: boolean; select: (k: PartKey) => void }) {
+  const part = yurtParts[k]
+  const x = sx(part.x), y = sy(part.y)
+  const left = part.x > 0.72
+  const w = part.name.length * 8.6 + 26
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(k) } }
+  return <g className={active ? 'hs active' : 'hs'} transform={`translate(${x} ${y})`} tabIndex={0} role="button"
+    aria-label={`${part.no}. ${part.name}`} aria-pressed={active} onClick={() => select(k)} onKeyDown={onKey}>
+    <g className="hs-in">
+    <circle className="hs-hit" r="24"/>
+    <circle className="hs-pulse" r="14"/>
+    <circle className="hs-dot" r="9"/>
+    <g className="hs-tip" transform={`translate(${left ? -w - 18 : 18} -15)`}>
+      <rect width={w} height="30" rx="15"/>
+      <text x={w / 2} y="20">{part.name}</text>
+    </g>
+    </g>
+  </g>
 }
 
-function Label({ x1, y1, x2, textX, text }: { x1:number; y1:number; x2:number; textX:number; text:string }) {
-  return <g className="museum-label"><path d={`M${x1} ${y1}H${x2}`}/><circle cx={x1} cy={y1} r="7"/><text x={textX} y={y1 + 6}>{text}</text></g>
+function Dimensions() {
+  const top = sy(36 / 731), base = sy(686 / 731)
+  const kTop = sy(386 / 731), kBot = sy(578 / 731)
+  const dLeft = sx(40 / 1000), dRight = sx(902 / 1000)
+  const hx = VW - 40, kx = 34, dy = VH - 22
+  return <g className="dims" aria-hidden="true">
+    {/* высота юрты */}
+    <path className="ext" d={`M${sx(.52)} ${top}H${hx + 8}M${sx(.6)} ${base}H${hx + 8}`}/>
+    <path className="dim" d={`M${hx} ${top}V${base}`} markerStart="url(#tick)" markerEnd="url(#tick)"/>
+    <g transform={`translate(${hx} ${(top + base) / 2}) rotate(-90)`}><rect x="-86" y="-14" width="172" height="28" rx="14"/><text y="5">Высота · {yurtSize.height}</text></g>
+    {/* высота кереге */}
+    <path className="ext" d={`M${sx(.045)} ${kTop}H${kx - 8}M${sx(.058)} ${kBot}H${kx - 8}`}/>
+    <path className="dim" d={`M${kx} ${kTop}V${kBot}`} markerStart="url(#tick)" markerEnd="url(#tick)"/>
+    <g transform={`translate(${kx} ${(kTop + kBot) / 2}) rotate(-90)`}><rect x="-70" y="-14" width="140" height="28" rx="14"/><text y="5">Кереге · {yurtSize.keregeHeight}</text></g>
+    {/* диаметр */}
+    <path className="ext" d={`M${dLeft} ${sy(.79)}V${dy + 8}M${dRight} ${sy(.8)}V${dy + 8}`}/>
+    <path className="dim" d={`M${dLeft} ${dy}H${dRight}`} markerStart="url(#tick)" markerEnd="url(#tick)"/>
+    <g transform={`translate(${(dLeft + dRight) / 2} ${dy})`}><rect x="-92" y="-14" width="184" height="28" rx="14"/><text y="5">Диаметр · {yurtSize.diameter}</text></g>
+  </g>
+}
+
+export default function AuthenticYurtDiagram({ selected, select }: { selected: PartKey; select: (part: PartKey) => void }) {
+  const [dims, setDims] = useState(true)
+  return <div className="diagram-wrap">
+    <div className="diagram-tools">
+      <span>15 элементов · нажмите на точку</span>
+      <button className={dims ? 'active' : ''} aria-pressed={dims} onClick={() => setDims(!dims)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7v10M20 7v10M4 12h16M7 9l-3 3 3 3M17 9l3 3-3 3"/></svg>Размеры
+      </button>
+    </div>
+    <svg className="yurt-svg yurt-main" viewBox={`0 0 ${VW} ${VH}`} role="group" aria-label="Интерактивная схема кыргызской юрты: 15 элементов конструкции">
+      <defs>
+        <marker id="tick" viewBox="-6 -6 12 12" markerWidth="12" markerHeight="12" orient="auto"><path d="M-4 4L4 -4" className="tick"/></marker>
+      </defs>
+      <image href={YURT_IMAGE} x={OX} y={OY} width={IW} height={IH} preserveAspectRatio="xMidYMid meet"/>
+      {dims && <Dimensions/>}
+      {partKeys.filter(k => k !== selected).map(k => <Hotspot key={k} k={k} active={false} select={select}/>)}
+      <Hotspot k={selected} active select={select}/>
+    </svg>
+  </div>
 }
