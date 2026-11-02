@@ -1,4 +1,4 @@
-# GitHub для двух новичков
+# GitHub 
 
 ## Один раз
 1. Владелец репозитория GitHub: Settings → Collaborators → Add people → пригласить второго разработчика.
@@ -13,7 +13,7 @@ cd Muras_Interactive_
 
 Владелец сначала добавляет архитектуру в `main`, затем обе выполняют `git pull origin main`.
 
-## Ветка Эркайым
+## Ветка Адинай
 ```bash
 git switch main
 git pull origin main
@@ -23,7 +23,7 @@ git commit -m "Add yurt module"
 git push -u origin feature/yurt
 ```
 
-## Ветка Адинай
+## Ветка Эркайым
 ```bash
 git switch main
 git pull origin main

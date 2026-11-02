@@ -1,10 +1,13 @@
-import { FormEvent, ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { photos } from './data'
 import { Traditions, TraditionDetail } from './Traditions'
+import { Auth } from './Auth'
+import { fetchMe, logout } from './api'
+import type { User } from './api'
 import AuthenticYurtDiagram from './AuthenticYurtDiagram'
 import { PartKey, partKeys, YURT_IMAGE, yurtParts, yurtSize } from './yurt'
 
-type Page = 'home' | 'yurt' | 'yurt-detail' | 'traditions' | 'tradition-detail' | 'login' | 'register' | 'recover'
+type Page = 'home' | 'yurt' | 'yurt-detail' | 'traditions' | 'tradition-detail' | 'login' | 'register' | 'recover' | 'reset'
 
 const Arrow = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 6l6 6-6 6"/></svg>
 const Eye = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
@@ -13,7 +16,7 @@ function Logo({ onClick }: { onClick: () => void }) {
   return <button className="logo" onClick={onClick} aria-label="На главную"><span className="logo-mark">М</span><span><b>MURAS</b><small>INTERACTIVE</small></span></button>
 }
 
-function Header({ page, go }: { page: Page; go: (p: Page) => void }) {
+function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => void; user: User | null; onLogout: () => void }) {
   const [open, setOpen] = useState(false)
   const nav = [{label:'Главная',p:'home'}, {label:'Юрта',p:'yurt'}, {label:'Традиции',p:'traditions'}] as const
   return <header className="header"><Logo onClick={() => go('home')} />
@@ -21,7 +24,7 @@ function Header({ page, go }: { page: Page; go: (p: Page) => void }) {
     <nav className={open ? 'nav open' : 'nav'}>
       {nav.map(n => <button key={n.p} className={page === n.p ? 'active' : ''} onClick={() => {go(n.p);setOpen(false)}}>{n.label}</button>)}
       <button className="soon">Фольклор <em>Скоро</em></button><button className="soon">Викторины <em>Скоро</em></button>
-      <button className="login-link" onClick={() => go('login')}>Войти <Arrow/></button>
+      {user ? <><span style={{fontSize:13,color:'var(--wine)'}}>{user.displayName}</span><button className="login-link" onClick={onLogout}>Выйти <Arrow/></button></> : <button className="login-link" onClick={() => go('login')}>Войти <Arrow/></button>}
     </nav>
   </header>
 }
@@ -92,29 +95,16 @@ function YurtDetail({ go, selected }: { go: (p: Page) => void; selected: PartKey
         <div className="materials"><b>Связанные элементы</b>{part.related.map(r => <span key={r}>{r}</span>)}</div></article></div></main>
 }
 
-function Auth({ mode, go }: { mode: 'login'|'register'|'recover'; go: (p: Page) => void }) {
-  const [show,setShow]=useState(false), [errors,setErrors]=useState<Record<string,string>>({}), [sent,setSent]=useState(false)
-  const submit=(e:FormEvent<HTMLFormElement>)=>{e.preventDefault(); const f=new FormData(e.currentTarget), err:Record<string,string>={}; const email=String(f.get('email')||''); if(!email.includes('@'))err.email='Введите корректный адрес электронной почты'; if(mode!=='recover' && String(f.get('password')||'').length<6)err.password='Пароль должен содержать не менее 6 символов'; if(mode==='register'&&f.get('password')!==f.get('confirm'))err.confirm='Пароли не совпадают'; setErrors(err); if(!Object.keys(err).length&&mode==='recover')setSent(true)}
-  const titles={login:['С возвращением','Войдите, чтобы продолжить путешествие по наследию.'],register:['Создайте аккаунт','Сохраняйте материалы и продолжайте исследование.'],recover:['Восстановление доступа','Мы отправим инструкции на вашу электронную почту.']}
-  return <main className="auth"><div className="auth-image" style={{backgroundImage:`linear-gradient(0deg,rgba(50,20,22,.72),rgba(50,20,22,.05)),url(${photos.hero})`}}><Logo onClick={()=>go('home')}/><blockquote>«То, что мы сохраняем сегодня, становится памятью <i>завтра</i>»</blockquote></div><section className="auth-form"><button className="back" onClick={()=>go('home')}>← На главную</button><div><p className="kicker">MURAS INTERACTIVE</p><h1>{titles[mode][0]}</h1><p>{titles[mode][1]}</p>
-    {sent?<div className="success"><b>Письмо отправлено</b><p>Если аккаунт с таким адресом существует, инструкции уже в пути.</p><Button onClick={()=>go('login')}>Вернуться ко входу</Button></div>:<form onSubmit={submit} noValidate>
-      {mode==='register'&&<label>Отображаемое имя<input name="name" required placeholder="Как к вам обращаться?"/></label>}
-      <label>Электронная почта<input name="email" type="email" className={errors.email?'invalid':''} placeholder="name@example.com"/>{errors.email&&<small>{errors.email}</small>}</label>
-      {mode!=='recover'&&<label>Пароль<div className="password"><input name="password" type={show?'text':'password'} className={errors.password?'invalid':''} placeholder="Не менее 6 символов"/><button type="button" onClick={()=>setShow(!show)} aria-label="Показать пароль"><Eye/></button></div>{errors.password&&<small>{errors.password}</small>}</label>}
-      {mode==='register'&&<label>Подтвердите пароль<input name="confirm" type={show?'text':'password'} className={errors.confirm?'invalid':''} placeholder="Повторите пароль"/>{errors.confirm&&<small>{errors.confirm}</small>}</label>}
-      {mode==='login'&&<button type="button" className="forgot" onClick={()=>go('recover')}>Забыли пароль?</button>}
-      <Button type="submit">{mode==='login'?'Войти':mode==='register'?'Зарегистрироваться':'Отправить инструкции'}</Button>
-    </form>}
-    {!sent&&<p className="switch">{mode==='login'?'Ещё нет аккаунта?':mode==='register'?'Уже есть аккаунт?':'Вспомнили пароль?'} <button onClick={()=>go(mode==='login'?'register':'login')}>{mode==='login'?'Зарегистрироваться':'Войти'}</button></p>}
-  </div></section></main>
-}
-
 export default function App() {
-  const [page,setPage]=useState<Page>('home')
+  const [page,setPage]=useState<Page>(()=>new URLSearchParams(window.location.search).has('reset')?'reset':'home')
+  const [resetToken]=useState(()=>new URLSearchParams(window.location.search).get('reset')??'')
+  const [user,setUser]=useState<User|null>(null)
+  useEffect(()=>{fetchMe().then(setUser).catch(()=>setUser(null))},[])
+  const doLogout=async()=>{try{await logout()}catch{/* всё равно считаем вышедшей */}finally{setUser(null);go('home')}}
   const [part,setPart]=useState<PartKey>('tunduk')
   const [riteId,setRiteId]=useState<number|null>(null)
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
-  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId}/>:<Auth mode={page as 'login'|'register'|'recover'} go={go}/>
-  const auth=['login','register','recover'].includes(page)
-  return <div>{!auth&&<Header page={page} go={go}/>} {content} {!auth&&<Footer go={go}/>}</div>
+  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
+  const auth=['login','register','recover','reset'].includes(page)
+  return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} {content} {!auth&&<Footer go={go}/>}</div>
 }

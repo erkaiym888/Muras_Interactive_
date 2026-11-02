@@ -1,0 +1,13 @@
+package kg.murasinteractive.user.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record ResetPasswordRequest(
+        @NotBlank(message = "Ссылка недействительна")
+        String token,
+
+        @NotBlank(message = "Введите пароль")
+        @Size(min = 8, max = 72, message = "Пароль должен содержать от 8 до 72 символов")
+        String password) {
+}
