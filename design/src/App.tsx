@@ -1,5 +1,6 @@
 import { FormEvent, ReactNode, useState } from 'react'
-import { photos, traditions } from './data'
+import { photos } from './data'
+import { Traditions, TraditionDetail } from './Traditions'
 import AuthenticYurtDiagram from './AuthenticYurtDiagram'
 import { PartKey, partKeys, YURT_IMAGE, yurtParts, yurtSize } from './yurt'
 
@@ -91,16 +92,6 @@ function YurtDetail({ go, selected }: { go: (p: Page) => void; selected: PartKey
         <div className="materials"><b>Связанные элементы</b>{part.related.map(r => <span key={r}>{r}</span>)}</div></article></div></main>
 }
 
-function Traditions({ go }: { go: (p: Page) => void }) {
-  const cats=['Все традиции','Свадебные','Рождение ребёнка','Похоронные и поминальные','Праздничные','Бытовые']; const [cat,setCat]=useState('Все традиции')
-  const shown=cat==='Все традиции'?traditions:traditions.filter(t=>t.category===cat)
-  return <main className="catalog"><div className="page-title"><p className="kicker">КУЛЬТУРНЫЙ АРХИВ · 02</p><h1>Традиции и <i>обряды</i></h1><p>Живые ритуалы, сопровождающие человека от рождения и объединяющие кыргызские семьи.</p></div><div className="filters">{cats.map(c=><button className={cat===c?'active':''} onClick={()=>setCat(c)} key={c}>{c}</button>)}</div><div className="card-grid">{shown.map((t,i)=><article className="trad-card" key={t.id}><div className="image"><img src={t.image} alt={t.title}/><span>0{i+1}</span></div><p>{t.category}</p><h2>{t.title}</h2><div><span>{t.description}</span><button onClick={()=>go('tradition-detail')} aria-label={`Подробнее: ${t.title}`}><Arrow/></button></div></article>)}</div></main>
-}
-
-function TraditionDetail({ go }: { go: (p: Page) => void }) {
-  return <main className="trad-detail"><button className="back" onClick={()=>go('traditions')}>← Назад в каталог</button><div className="trad-hero" style={{backgroundImage:`linear-gradient(0deg,rgba(30,18,15,.7),transparent),url(${photos.interior})`}}><div><p>РОЖДЕНИЕ РЕБЁНКА</p><h1>Бешик той</h1><span>Праздник колыбели и первое благословение ребёнка</span></div></div><div className="reading"><aside><p>Время чтения<br/><b>6 минут</b></p><p>Регион<br/><b>Весь Кыргызстан</b></p></aside><article><p className="big">Бешик той — семейное торжество, посвящённое первому укладыванию младенца в бешик, традиционную кыргызскую колыбель.</p><p>Обряд обычно проводит уважаемая старшая женщина семьи. Родные собираются, чтобы пожелать ребёнку здоровья, долгой жизни и достойного пути.</p><h2>Этапы обряда</h2><ol><li><b>Подготовка бешика</b><span>Колыбель очищают, украшают и застилают специально подготовленными принадлежностями.</span></li><li><b>Алас-алас</b><span>Проводится символическое очищение дымом арчи с добрыми пожеланиями.</span></li><li><b>Укладывание ребёнка</b><span>Опытная женщина показывает молодой матери, как безопасно уложить младенца.</span></li><li><b>Бата</b><span>Старшие произносят благословение, после чего семье преподносят подарки.</span></li></ol><h2>Культурный смысл</h2><p>Бешик воспринимается не только как предмет быта, но и как защищённое первое пространство ребёнка. Обряд подчёркивает участие рода в заботе о новом поколении.</p><div className="sources"><b>Источники</b><p>Материалы этнографических исследований Кыргызского национального музея и открытых публикаций о семейной обрядности кыргызов.</p></div></article></div></main>
-}
-
 function Auth({ mode, go }: { mode: 'login'|'register'|'recover'; go: (p: Page) => void }) {
   const [show,setShow]=useState(false), [errors,setErrors]=useState<Record<string,string>>({}), [sent,setSent]=useState(false)
   const submit=(e:FormEvent<HTMLFormElement>)=>{e.preventDefault(); const f=new FormData(e.currentTarget), err:Record<string,string>={}; const email=String(f.get('email')||''); if(!email.includes('@'))err.email='Введите корректный адрес электронной почты'; if(mode!=='recover' && String(f.get('password')||'').length<6)err.password='Пароль должен содержать не менее 6 символов'; if(mode==='register'&&f.get('password')!==f.get('confirm'))err.confirm='Пароли не совпадают'; setErrors(err); if(!Object.keys(err).length&&mode==='recover')setSent(true)}
@@ -121,8 +112,9 @@ function Auth({ mode, go }: { mode: 'login'|'register'|'recover'; go: (p: Page) 
 export default function App() {
   const [page,setPage]=useState<Page>('home')
   const [part,setPart]=useState<PartKey>('tunduk')
+  const [riteId,setRiteId]=useState<number|null>(null)
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
-  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions go={go}/>:page==='tradition-detail'?<TraditionDetail go={go}/>:<Auth mode={page as 'login'|'register'|'recover'} go={go}/>
+  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId}/>:<Auth mode={page as 'login'|'register'|'recover'} go={go}/>
   const auth=['login','register','recover'].includes(page)
   return <div>{!auth&&<Header page={page} go={go}/>} {content} {!auth&&<Footer go={go}/>}</div>
 }
