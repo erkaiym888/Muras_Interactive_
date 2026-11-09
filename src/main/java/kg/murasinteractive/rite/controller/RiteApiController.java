@@ -7,6 +7,7 @@ import kg.murasinteractive.rite.service.RiteService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -14,7 +15,7 @@ import java.util.List;
 /**
  * JSON API для React-страниц из папки design/.
  *  GET /api/rite-categories  - категории (для фильтров)
- *  GET /api/rites            - каталог обрядов
+ *  GET /api/rites            - каталог обрядов (FR-2.3: ?categoryId=1&q=той&sort=title|title_desc|new|old)
  *  GET /api/rites/{id}       - карточка обряда
  */
 @RestController
@@ -33,8 +34,10 @@ public class RiteApiController {
     }
 
     @GetMapping("/rites")
-    public List<RiteSummaryDto> rites() {
-        return riteService.findPublishedSummaries();
+    public List<RiteSummaryDto> rites(@RequestParam(required = false) Long categoryId,
+                                      @RequestParam(required = false) String q,
+                                      @RequestParam(required = false) String sort) {
+        return riteService.findPublishedSummaries(categoryId, q, sort);
     }
 
     @GetMapping("/rites/{riteId}")
