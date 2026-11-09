@@ -62,3 +62,18 @@
 
 .info-panel h2{font-size:clamp(34px,3.3vw,48px);line-height:1.1}
 .detail-hero .hero-lens{position:relative;left:auto;bottom:auto;width:100%}
+
+/* FR-1.3: подсветка элемента при наведении и выбор касанием */
+.hs{touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:opacity .2s}
+.hs-ring{fill:none;stroke:var(--gold);stroke-width:3;opacity:0;pointer-events:none;transition:opacity .2s}
+.hs:hover .hs-ring,.hs:focus-visible .hs-ring,.hs.active .hs-ring{opacity:1}
+.yurt-svg:has(.hs:hover) .hs:not(:hover):not(.active){opacity:.4}
+.touch-list{display:none}
+@media(pointer:coarse),(max-width:900px){
+.touch-list{display:flex;flex-wrap:wrap;gap:8px;padding:14px 8px 4px}
+.touch-list button{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;border:1px solid #cdbda5;border-radius:999px;background:transparent;color:#5d5249;font-size:13px;touch-action:manipulation}
+.touch-list button b{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#efe7da;color:var(--wine);font-size:11px}
+.touch-list button.active{background:var(--wine);border-color:var(--wine);color:#fff}
+.touch-list button.active b{background:var(--gold);color:#fff}
+}
+@media(pointer:coarse) and (min-width:601px){.hs-in{transform:scale(1.35)}}
