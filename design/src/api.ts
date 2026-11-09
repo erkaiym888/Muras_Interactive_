@@ -96,3 +96,35 @@ export const requestPasswordReset = (email: string) => post('/api/auth/forgot', 
 
 export const resetPassword = (token: string, password: string) =>
   post('/api/auth/reset', { token, password })
+
+// ---------- Фольклор: герои и произведения (FR-3.1, FR-3.2) ----------
+
+export type FolkloreKind = 'hero' | 'work'
+export type FolkloreType = { id: number; name: string }
+
+export type FolkloreItem = {
+  kind: FolkloreKind
+  id: number
+  title: string
+  type: string
+  summary: string | null
+  imageUrl: string | null
+}
+
+export type FolkloreLink = { kind: FolkloreKind; id: number; title: string }
+export type FolkloreImage = { url: string; caption: string | null }
+
+export type FolkloreDetail = {
+  kind: FolkloreKind
+  id: number
+  title: string
+  type: string
+  description: string | null
+  related: FolkloreLink[]
+  images: FolkloreImage[]
+}
+
+export const fetchFolkloreTypes = () => getJson<FolkloreType[]>('/api/folklore/types')
+export const fetchFolkloreItems = () => getJson<FolkloreItem[]>('/api/folklore/items')
+export const fetchFolkloreDetail = (kind: FolkloreKind, id: number) =>
+  getJson<FolkloreDetail>(`/api/folklore/${kind === 'hero' ? 'heroes' : 'works'}/${id}`)
