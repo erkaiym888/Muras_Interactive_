@@ -241,3 +241,20 @@
 @media(max-width:700px){.header{padding:0 18px}.burger-label{display:none}.drawer{padding:22px 24px 28px}.drawer-nav b{font-size:26px}}
 @media(prefers-reduced-motion:reduce){.drawer,.drawer-backdrop,.burger-lines i,.drawer-nav button{transition:none}}
 .drawer-nav .soon em{position:static;font-size:11px;text-transform:none;color:var(--sand)}
+
+/* ===== Редактор: фольклор ===== */
+.badge.kind-hero{background:#f3e3e4;color:var(--wine)}
+.badge.kind-work{background:#e6e9f2;color:#3d4a6b}
+.editor-tabs{flex-wrap:wrap;column-gap:32px}
+.links{margin-top:10px}
+.link-chips{display:flex;flex-wrap:wrap;gap:8px;padding-top:12px}
+.link-chips .chip{display:inline-flex;align-items:baseline;gap:8px;border:1px solid #d6cbbc;padding:8px 13px;cursor:pointer;font-size:14px;background:var(--white);transition:.15s}
+.link-chips .chip small{font-size:11px;color:#8a7d73}
+.link-chips .chip input{position:absolute;opacity:0;pointer-events:none}
+.link-chips .chip:hover{border-color:var(--wine)}
+.link-chips .chip.on{background:var(--wine);border-color:var(--wine);color:#fff}
+.link-chips .chip.on small{color:var(--sand)}
+.link-chips .chip:has(input:focus-visible){outline:2px solid var(--gold);outline-offset:2px}
+.hint-text{color:#8a7d73;font-size:14px;margin:12px 0 0}
+.kind-line{margin:0 0 16px}
+.editor-toolbar .btn.ghost{background:transparent;color:var(--wine)}

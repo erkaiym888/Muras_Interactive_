@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
+import type { FormEvent } from 'react'
 import {
   ApiError, canEditContent, createCategory, createRite, deleteCategory, deleteRite, editorCategories,
   editorRite, editorRites, renameCategory, updateRite,
 } from './api'
 import type { EditorCategory, EditorRiteRow, RiteForm, RiteStatus, User } from './api'
+import { Field, ImagesField, errorText, imageErrors } from './EditorFields'
+import { FolkloreEditor } from './FolkloreEditor'
+import type { FolkloreRef } from './Folklore'
 
 /**
  * Редактор контента (FR-7.1): добавление, просмотр, изменение и удаление обрядов и категорий.
@@ -31,18 +34,11 @@ const normalize = (f: RiteForm): RiteForm => ({
   images: (f.images ?? []).map(i => ({ url: i.url ?? '', caption: i.caption ?? '' })),
 })
 
-function errorText(e: unknown, fallback: string) {
-  if (e instanceof ApiError) {
-    if (e.status === 401) return 'Сессия закончилась. Войдите снова.'
-    if (e.status === 403) return 'Недостаточно прав для этого действия.'
-    if (e.message) return e.message
-  }
-  return fallback
-}
+type View = { tab: 'rites' } | { tab: 'form'; id: number | null } | { tab: 'folklore' } | { tab: 'categories' }
 
-type View = { tab: 'rites' } | { tab: 'form'; id: number | null } | { tab: 'categories' }
-
-export function Editor({ user, goLogin, openRite }: { user: User | null; goLogin: () => void; openRite: (id: number) => void }) {
+export function Editor({ user, goLogin, openRite, openFolklore }: {
+  user: User | null; goLogin: () => void; openRite: (id: number) => void; openFolklore: (ref: FolkloreRef) => void
+}) {
   const [view, setView] = useState<View>({ tab: 'rites' })
   const [toast, setToast] = useState('')
 
@@ -62,6 +58,7 @@ export function Editor({ user, goLogin, openRite }: { user: User | null; goLogin
   }
 
   const saved = (text: string) => { setToast(text); setView({ tab: 'rites' }) }
+  const ritesTab = view.tab === 'rites' || view.tab === 'form'
 
   return <main className="editor">
     <div className="editor-head">
@@ -69,12 +66,14 @@ export function Editor({ user, goLogin, openRite }: { user: User | null; goLogin
       <p className="editor-who">{user.displayName}<span>{user.role === 'ADMIN' ? 'Администратор' : 'Редактор контента'}</span></p>
     </div>
     <div className="editor-tabs" role="tablist">
-      <button role="tab" aria-selected={view.tab !== 'categories'} className={view.tab !== 'categories' ? 'active' : ''} onClick={() => setView({ tab: 'rites' })}>Обряды</button>
-      <button role="tab" aria-selected={view.tab === 'categories'} className={view.tab === 'categories' ? 'active' : ''} onClick={() => setView({ tab: 'categories' })}>Категории</button>
+      <button role="tab" aria-selected={ritesTab} className={ritesTab ? 'active' : ''} onClick={() => setView({ tab: 'rites' })}>Обряды</button>
+      <button role="tab" aria-selected={view.tab === 'categories'} className={view.tab === 'categories' ? 'active' : ''} onClick={() => setView({ tab: 'categories' })}>Категории обрядов</button>
+      <button role="tab" aria-selected={view.tab === 'folklore'} className={view.tab === 'folklore' ? 'active' : ''} onClick={() => setView({ tab: 'folklore' })}>Фольклор</button>
     </div>
     {view.tab === 'rites' && <RiteList onEdit={id => setView({ tab: 'form', id })} onCreate={() => setView({ tab: 'form', id: null })} openRite={openRite} notify={setToast} />}
     {view.tab === 'form' && <RiteEditor id={view.id} onCancel={() => setView({ tab: 'rites' })} onSaved={saved} />}
     {view.tab === 'categories' && <Categories notify={setToast} />}
+    {view.tab === 'folklore' && <FolkloreEditor notify={setToast} openFolklore={openFolklore} />}
     <div className={toast ? 'editor-toast show' : 'editor-toast'} role="status" aria-live="polite">{toast}</div>
   </main>
 }
@@ -148,10 +147,6 @@ function RiteList({ onEdit, onCreate, openRite, notify }: {
 
 // ---------- Форма обряда ----------
 
-function Field({ label, error, children, hint }: { label: string; error?: string; children: ReactNode; hint?: string }) {
-  return <label className={error ? 'ed-field invalid' : 'ed-field'}><span>{label}</span>{children}{hint && !error && <small className="hint">{hint}</small>}{error && <small>{error}</small>}</label>
-}
-
 function RiteEditor({ id, onCancel, onSaved }: { id: number | null; onCancel: () => void; onSaved: (text: string) => void }) {
   const [form, setForm] = useState<RiteForm | null>(id === null ? emptyForm() : null)
   const [categories, setCategories] = useState<EditorCategory[]>([])
@@ -167,14 +162,17 @@ function RiteEditor({ id, onCancel, onSaved }: { id: number | null; onCancel: ()
   if (!form) return <section><button className="back" onClick={onCancel}>← К списку обрядов</button>
     {formError ? <p className="editor-error" role="alert">{formError}</p> : <p className="editor-empty" role="status">Загрузка…</p>}</section>
 
-  const set = <K extends keyof RiteForm>(key: K, value: RiteForm[K]) => setForm({ ...form, [key]: value })
+  const set = <K extends keyof RiteForm>(key: K, value: RiteForm[K]) => {
+    setForm({ ...form, [key]: value })
+    // Ошибка поля исчезает, как только его исправляют
+    if (errors[key as string]) setErrors(({ [key as string]: _, ...rest }) => rest)
+  }
   const setStep = (i: number, patch: Partial<RiteForm['steps'][number]>) => set('steps', form.steps.map((s, j) => j === i ? { ...s, ...patch } : s))
   const moveStep = (i: number, d: number) => {
     const steps = [...form.steps]
     ;[steps[i], steps[i + d]] = [steps[i + d], steps[i]]
     set('steps', steps)
   }
-  const setImage = (i: number, patch: Partial<RiteForm['images'][number]>) => set('images', form.images.map((m, j) => j === i ? { ...m, ...patch } : m))
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -182,7 +180,7 @@ function RiteEditor({ id, onCancel, onSaved }: { id: number | null; onCancel: ()
     if (form.categoryId === null) e.categoryId = 'Выберите категорию'
     if (form.summary.length > 500) e.summary = 'Не длиннее 500 символов'
     form.steps.forEach((s, i) => { if (!s.text.trim()) e[`steps[${i}].text`] = 'Опишите этап или удалите его' })
-    form.images.forEach((m, i) => { if (!m.url.trim()) e[`images[${i}].url`] = 'Укажите адрес или удалите изображение' })
+    Object.assign(e, imageErrors(form.images))
     if (form.status === 'PUBLISHED' && !form.summary.trim()) e.summary = 'Для публикации нужна аннотация — она видна в каталоге'
     return e
   }
@@ -254,20 +252,7 @@ function RiteEditor({ id, onCancel, onSaved }: { id: number | null; onCancel: ()
             </select>
           </Field>
         </div>
-        <div className="side-card">
-          <span className="side-label">Изображения <em>{form.images.length}</em></span>
-          {form.images.map((m, i) => <div className="image-row" key={i}>
-            {m.url.trim() ? <img src={m.url} alt={m.caption || 'Предпросмотр'} /> : <i className="thumb-empty" aria-hidden="true">✦</i>}
-            <div>
-              <input value={m.url} onChange={e => setImage(i, { url: e.target.value })} placeholder="https://… или /images/rites/…" aria-label={`Адрес изображения ${i + 1}`} className={errors[`images[${i}].url`] ? 'invalid' : ''} />
-              <input value={m.caption} onChange={e => setImage(i, { caption: e.target.value })} placeholder="Подпись (alt-текст)" aria-label={`Подпись изображения ${i + 1}`} />
-              {errors[`images[${i}].url`] && <small className="err">{errors[`images[${i}].url`]}</small>}
-            </div>
-            <button type="button" onClick={() => set('images', form.images.filter((_, j) => j !== i))} aria-label={`Удалить изображение ${i + 1}`}>×</button>
-          </div>)}
-          <button type="button" className="add" onClick={() => set('images', [...form.images, { url: '', caption: '' }])}>+ Добавить изображение</button>
-          <small className="hint">Первое изображение — обложка в каталоге.</small>
-        </div>
+        <ImagesField images={form.images} onChange={images => set('images', images)} errors={errors} />
       </aside>
     </div>
     <div className="form-actions">

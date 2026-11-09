@@ -202,3 +202,46 @@ export const editorCategories = () => getAuthed<EditorCategory[]>('/api/editor/r
 export const createCategory = (name: string) => send<EditorCategory>('POST', '/api/editor/rite-categories', { name })
 export const renameCategory = (id: number, name: string) => send<EditorCategory>('PUT', `/api/editor/rite-categories/${id}`, { name })
 export const deleteCategory = (id: number) => send<void>('DELETE', `/api/editor/rite-categories/${id}`)
+
+// ---------- Редактор: фольклор (FR-7.1) ----------
+
+export type EditorImage = { url: string; caption: string }
+
+export type EditorFolkloreRow = {
+  kind: FolkloreKind
+  id: number
+  title: string
+  typeId: number
+  type: string
+  linkCount: number
+  imageUrl: string | null
+}
+
+export type FolkloreHeroForm = {
+  id?: number | null
+  name: string
+  typeId: number | null
+  description: string
+  workIds: number[]
+  images: EditorImage[]
+}
+
+export type FolkloreWorkForm = {
+  id?: number | null
+  title: string
+  typeId: number | null
+  summary: string
+  heroIds: number[]
+  images: EditorImage[]
+}
+
+export const editorFolklore = () => getAuthed<EditorFolkloreRow[]>('/api/editor/folklore')
+export const editorFolkloreTypes = () => getAuthed<FolkloreType[]>('/api/editor/folklore/types')
+export const editorHero = (id: number) => getAuthed<FolkloreHeroForm>(`/api/editor/folklore/heroes/${id}`)
+export const createHero = (form: FolkloreHeroForm) => send<FolkloreHeroForm>('POST', '/api/editor/folklore/heroes', form)
+export const updateHero = (id: number, form: FolkloreHeroForm) => send<FolkloreHeroForm>('PUT', `/api/editor/folklore/heroes/${id}`, form)
+export const deleteHero = (id: number) => send<void>('DELETE', `/api/editor/folklore/heroes/${id}`)
+export const editorWork = (id: number) => getAuthed<FolkloreWorkForm>(`/api/editor/folklore/works/${id}`)
+export const createWork = (form: FolkloreWorkForm) => send<FolkloreWorkForm>('POST', '/api/editor/folklore/works', form)
+export const updateWork = (id: number, form: FolkloreWorkForm) => send<FolkloreWorkForm>('PUT', `/api/editor/folklore/works/${id}`, form)
+export const deleteWork = (id: number) => send<void>('DELETE', `/api/editor/folklore/works/${id}`)
