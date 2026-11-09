@@ -87,6 +87,26 @@ async function post(url: string, body?: Record<string, string>, asForm = false):
   if (!response.ok) throw await toApiError(response)
 }
 
+/** Запрос с JSON-телом и CSRF-токеном (POST, PUT, DELETE). Возвращает ответ сервера, если он есть. */
+async function send<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body?: unknown): Promise<T> {
+  const csrfResponse = await fetch('/api/auth/csrf')
+  if (!csrfResponse.ok) throw await toApiError(csrfResponse)
+  const csrf = (await csrfResponse.json()) as { token: string; headerName: string }
+
+  const headers: Record<string, string> = { [csrf.headerName]: csrf.token }
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const response = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+  if (!response.ok) throw await toApiError(response)
+  const text = await response.text()
+  return (text ? JSON.parse(text) : undefined) as T
+}
+
+async function getAuthed<T>(url: string): Promise<T> {
+  const response = await fetch(url)
+  if (!response.ok) throw await toApiError(response)
+  return response.json() as Promise<T>
+}
+
 /** Текущий пользователь или null, если не вошёл. */
 export async function fetchMe(): Promise<User | null> {
   const response = await fetch('/api/auth/me')
@@ -140,3 +160,45 @@ export const fetchFolkloreItems = () => getJson<FolkloreItem[]>('/api/folklore/i
 export const fetchFolkloreDetail = (kind: FolkloreKind, id: number) =>
   getJson<FolkloreDetail>(`/api/folklore/${kind === 'hero' ? 'heroes' : 'works'}/${id}`)
 
+// ---------- Редактор контента (FR-7.1) ----------
+
+export type RiteStatus = 'DRAFT' | 'PUBLISHED' | 'HIDDEN'
+
+/** Роли, которым доступно управление содержимым. */
+export const canEditContent = (user: User | null) => user?.role === 'EDITOR' || user?.role === 'ADMIN'
+
+export type EditorRiteRow = {
+  id: number
+  title: string
+  categoryId: number
+  category: string
+  status: RiteStatus
+  stepCount: number
+  imageUrl: string | null
+}
+
+export type RiteForm = {
+  id?: number | null
+  title: string
+  categoryId: number | null
+  status: RiteStatus
+  summary: string
+  description: string
+  symbolism: string
+  sources: string
+  steps: { title: string; text: string }[]
+  images: { url: string; caption: string }[]
+}
+
+export type EditorCategory = { id: number; name: string; riteCount: number }
+
+export const editorRites = () => getAuthed<EditorRiteRow[]>('/api/editor/rites')
+export const editorRite = (id: number) => getAuthed<RiteForm>(`/api/editor/rites/${id}`)
+export const createRite = (form: RiteForm) => send<RiteForm>('POST', '/api/editor/rites', form)
+export const updateRite = (id: number, form: RiteForm) => send<RiteForm>('PUT', `/api/editor/rites/${id}`, form)
+export const deleteRite = (id: number) => send<void>('DELETE', `/api/editor/rites/${id}`)
+
+export const editorCategories = () => getAuthed<EditorCategory[]>('/api/editor/rite-categories')
+export const createCategory = (name: string) => send<EditorCategory>('POST', '/api/editor/rite-categories', { name })
+export const renameCategory = (id: number, name: string) => send<EditorCategory>('PUT', `/api/editor/rite-categories/${id}`, { name })
+export const deleteCategory = (id: number) => send<void>('DELETE', `/api/editor/rite-categories/${id}`)

@@ -11,4 +11,11 @@ public interface RiteRepository extends JpaRepository<Rite, Long> {
     List<Rite> findByStatusOrderByRiteIdAsc(String status);
 
     Optional<Rite> findByRiteIdAndStatus(Long riteId, String status);
+
+    /** Все обряды в любом статусе - для редактора контента (FR-7.1). */
+    List<Rite> findAllByOrderByRiteIdDesc();
+
+    boolean existsByRiteCategory_RiteCategoryId(Long riteCategoryId);
+
+    long countByRiteCategory_RiteCategoryId(Long riteCategoryId);
 }
