@@ -5,6 +5,7 @@ export type RiteCategory = { id: number; name: string }
 export type RiteSummary = {
   id: number
   title: string
+  categoryId: number
   category: string
   summary: string
   imageUrl: string | null
@@ -32,7 +33,17 @@ async function getJson<T>(url: string): Promise<T> {
 }
 
 export const fetchCategories = () => getJson<RiteCategory[]>('/api/rite-categories')
-export const fetchRites = () => getJson<RiteSummary[]>('/api/rites')
+/** Сортировка каталога (FR-2.3): по алфавиту, в обратном порядке, сначала новые, сначала давние. */
+export type RiteSort = 'title' | 'title_desc' | 'new' | 'old'
+
+export function fetchRites(params: { categoryId?: number | null; q?: string; sort?: RiteSort } = {}) {
+  const query = new URLSearchParams()
+  if (params.categoryId != null) query.set('categoryId', String(params.categoryId))
+  if (params.q?.trim()) query.set('q', params.q.trim())
+  if (params.sort) query.set('sort', params.sort)
+  const qs = query.toString()
+  return getJson<RiteSummary[]>(qs ? `/api/rites?${qs}` : '/api/rites')
+}
 export const fetchRite = (id: number) => getJson<RiteDetail>(`/api/rites/${id}`)
 
 // ---------- Учётные записи (FR-6.1) ----------
@@ -128,3 +139,4 @@ export const fetchFolkloreTypes = () => getJson<FolkloreType[]>('/api/folklore/t
 export const fetchFolkloreItems = () => getJson<FolkloreItem[]>('/api/folklore/items')
 export const fetchFolkloreDetail = (kind: FolkloreKind, id: number) =>
   getJson<FolkloreDetail>(`/api/folklore/${kind === 'hero' ? 'heroes' : 'works'}/${id}`)
+
