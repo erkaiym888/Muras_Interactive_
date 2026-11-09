@@ -4,12 +4,13 @@ import { Traditions, TraditionDetail } from './Traditions'
 import { Auth } from './Auth'
 import { Folklore, FolkloreDetail } from './Folklore'
 import type { FolkloreRef } from './Folklore'
-import { fetchMe, logout } from './api'
+import { canEditContent, fetchMe, logout } from './api'
+import { Editor } from './Editor'
 import type { User } from './api'
 import AuthenticYurtDiagram from './AuthenticYurtDiagram'
 import { PartKey, partKeys, YURT_IMAGE, yurtParts, yurtSize } from './yurt'
 
-type Page = 'home' | 'yurt' | 'yurt-detail' | 'traditions' | 'tradition-detail' | 'folklore' | 'folklore-detail' | 'login' | 'register' | 'recover' | 'reset'
+type Page = 'home' | 'yurt' | 'yurt-detail' | 'traditions' | 'tradition-detail' | 'folklore' | 'folklore-detail' | 'editor' | 'login' | 'register' | 'recover' | 'reset'
 
 const Arrow = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 6l6 6-6 6"/></svg>
 const Eye = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
@@ -26,6 +27,7 @@ function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => voi
     <nav className={open ? 'nav open' : 'nav'}>
       {nav.map(n => <button key={n.p} className={page === n.p ? 'active' : ''} onClick={() => {go(n.p);setOpen(false)}}>{n.label}</button>)}
       <button className="soon">Викторины <em>Скоро</em></button>
+      {canEditContent(user) && <button className={page === 'editor' ? 'active nav-editor' : 'nav-editor'} onClick={() => {go('editor');setOpen(false)}}>Редактор</button>}
       {user ? <><span style={{fontSize:13,color:'var(--wine)'}}>{user.displayName}</span><button className="login-link" onClick={onLogout}>Выйти <Arrow/></button></> : <button className="login-link" onClick={() => go('login')}>Войти <Arrow/></button>}
     </nav>
   </header>
@@ -107,7 +109,7 @@ export default function App() {
   const [riteId,setRiteId]=useState<number|null>(null)
   const [folkloreRef,setFolkloreRef]=useState<FolkloreRef|null>(null)
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
-  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
+  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
   const auth=['login','register','recover','reset'].includes(page)
   return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} {content} {!auth&&<Footer go={go}/>}</div>
 }

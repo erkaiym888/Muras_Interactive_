@@ -11,4 +11,6 @@ public interface RiteCategoryRepository extends JpaRepository<RiteCategory, Long
     Optional<RiteCategory> findByCategoryName(String categoryName);
 
     List<RiteCategory> findAllByOrderByRiteCategoryIdAsc();
+
+    boolean existsByCategoryNameIgnoreCase(String categoryName);
 }
