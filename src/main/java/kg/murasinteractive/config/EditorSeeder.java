@@ -26,6 +26,9 @@ public class EditorSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(EditorSeeder.class);
 
+    /** Имя по умолчанию хранится здесь, а не в .properties: тот файл читается в ISO-8859-1. */
+    private static final String DEFAULT_NAME = "Редактор контента";
+
     private final UserRoleRepository roleRepository;
     private final UserAccountRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -43,7 +46,7 @@ public class EditorSeeder implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
         this.email = email;
         this.password = password;
-        this.displayName = displayName;
+        this.displayName = displayName == null || displayName.isBlank() ? DEFAULT_NAME : displayName.trim();
     }
 
     @Override
@@ -71,9 +74,20 @@ public class EditorSeeder implements CommandLineRunner {
             editor.setRole(editorRole);
             userRepository.save(editor);
             log.info("Создан редактор контента: {}", normalized);
-        } else if (UserRole.USER.equals(editor.getRole().getRoleName())) {
-            editor.setRole(editorRole);
-            log.info("Пользователю {} выдана роль редактора контента", normalized);
+        } else {
+            if (UserRole.USER.equals(editor.getRole().getRoleName())) {
+                editor.setRole(editorRole);
+                log.info("Пользователю {} выдана роль редактора контента", normalized);
+            }
+            // Исправляем имя, испорченное прежней версией (кириллица, прочитанная как ISO-8859-1: "Ð Ðµ...")
+            if (looksGarbled(editor.getDisplayName())) {
+                editor.setDisplayName(displayName);
+                log.info("Исправлено имя редактора контента: {}", displayName);
+            }
         }
+    }
+
+    private static boolean looksGarbled(String name) {
+        return name != null && (name.contains("Ð") || name.contains("Ñ"));
     }
 }
