@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 import { photos } from './data'
 import { Traditions, TraditionDetail } from './Traditions'
 import { Auth } from './Auth'
@@ -19,17 +19,67 @@ function Logo({ onClick }: { onClick: () => void }) {
   return <button className="logo" onClick={onClick} aria-label="На главную"><span className="logo-mark">М</span><span><b>MURAS</b><small>INTERACTIVE</small></span></button>
 }
 
+const NAV = [
+  { label: 'Главная', p: 'home', note: 'Цифровой музей наследия' },
+  { label: 'Юрта', p: 'yurt', note: 'Интерактивная экспозиция' },
+  { label: 'Традиции', p: 'traditions', note: 'Обряды и обычаи' },
+  { label: 'Фольклор', p: 'folklore', note: 'Герои и произведения' },
+] as const
+
+const ROLE_LABEL: Record<string, string> = { ADMIN: 'Администратор', EDITOR: 'Редактор контента', USER: 'Посетитель' }
+
+/** Шапка: только логотип и кнопка меню. Все разделы и аккаунт - в выезжающей панели. */
 function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => void; user: User | null; onLogout: () => void }) {
   const [open, setOpen] = useState(false)
-  const nav = [{label:'Главная',p:'home'}, {label:'Юрта',p:'yurt'}, {label:'Традиции',p:'traditions'}, {label:'Фольклор',p:'folklore'}] as const
-  return <header className="header"><Logo onClick={() => go('home')} />
-    <button className="menu-btn" onClick={() => setOpen(!open)} aria-label="Открыть меню"><i/><i/></button>
-    <nav className={open ? 'nav open' : 'nav'}>
-      {nav.map(n => <button key={n.p} className={page === n.p ? 'active' : ''} onClick={() => {go(n.p);setOpen(false)}}>{n.label}</button>)}
-      <button className="soon">Викторины <em>Скоро</em></button>
-      {canEditContent(user) && <button className={page === 'editor' ? 'active nav-editor' : 'nav-editor'} onClick={() => {go('editor');setOpen(false)}}>Редактор</button>}
-      {user ? <><span style={{fontSize:13,color:'var(--wine)'}}>{user.displayName}</span><button className="login-link" onClick={onLogout}>Выйти <Arrow/></button></> : <button className="login-link" onClick={() => go('login')}>Войти <Arrow/></button>}
-    </nav>
+  const burger = useRef<HTMLButtonElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    panel.current?.querySelector<HTMLElement>('.drawer-close')?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Tab' && panel.current) {
+        const items = panel.current.querySelectorAll<HTMLElement>('button:not(:disabled)')
+        const first = items[0], last = items[items.length - 1]
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); burger.current?.focus() }
+  }, [open])
+
+  const to = (p: Page) => { setOpen(false); go(p) }
+  const items: { label: string; p: Page; note: string }[] = [...NAV]
+  if (canEditContent(user)) items.push({ label: 'Редактор', p: 'editor', note: 'Управление содержимым' })
+
+  return <header className="header">
+    <Logo onClick={() => go('home')} />
+    <button ref={burger} className={open ? 'burger open' : 'burger'} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="site-menu" aria-label={open ? 'Закрыть меню' : 'Открыть меню'}>
+      <span className="burger-label">Меню</span><span className="burger-lines" aria-hidden="true"><i/><i/><i/></span>
+    </button>
+    <div className={open ? 'drawer-backdrop show' : 'drawer-backdrop'} onClick={() => setOpen(false)} aria-hidden="true"/>
+    <div ref={panel} id="site-menu" className={open ? 'drawer open' : 'drawer'} role="dialog" aria-modal="true" aria-label="Меню сайта" inert={!open}>
+      <div className="drawer-top"><span className="kicker">MURAS INTERACTIVE</span><button className="drawer-close" onClick={() => setOpen(false)} aria-label="Закрыть меню">×</button></div>
+      <nav className="drawer-nav" aria-label="Разделы">
+        {items.map((n, i) => <button key={n.p} className={page === n.p || page === `${n.p}-detail` ? 'active' : ''} aria-current={page === n.p ? 'page' : undefined} onClick={() => to(n.p)}>
+          <em>{String(i + 1).padStart(2, '0')}</em><span><b>{n.label}</b><small>{n.note}</small></span>
+        </button>)}
+        <button className="soon" disabled><em>{String(items.length + 1).padStart(2, '0')}</em><span><b>Викторины</b><small>Скоро</small></span></button>
+      </nav>
+      <div className="drawer-account">
+        {user ? <>
+          <p className="who"><span className="avatar" aria-hidden="true">{user.displayName.trim().charAt(0).toUpperCase()}</span><span><b>{user.displayName}</b><small>{ROLE_LABEL[user.role] ?? user.role}</small></span></p>
+          <button className="drawer-btn" onClick={() => { setOpen(false); onLogout() }}>Выйти из аккаунта <Arrow/></button>
+        </> : <>
+          <p className="drawer-hint">Войдите, чтобы сохранять материалы и проходить викторины.</p>
+          <div className="drawer-auth"><button className="drawer-btn" onClick={() => to('login')}>Войти <Arrow/></button><button className="drawer-btn ghost" onClick={() => to('register')}>Регистрация</button></div>
+        </>}
+      </div>
+    </div>
   </header>
 }
 
@@ -104,7 +154,7 @@ export default function App() {
   const [resetToken]=useState(()=>new URLSearchParams(window.location.search).get('reset')??'')
   const [user,setUser]=useState<User|null>(null)
   useEffect(()=>{fetchMe().then(setUser).catch(()=>setUser(null))},[])
-  const doLogout=async()=>{try{await logout()}catch{/* всё равно считаем вышедшей */}finally{setUser(null);go('home')}}
+  const doLogout=async()=>{try{await logout()}catch{/* всё равно считаем вышедшей */}finally{setUser(null);go('register')}}
   const [part,setPart]=useState<PartKey>('tunduk')
   const [riteId,setRiteId]=useState<number|null>(null)
   const [folkloreRef,setFolkloreRef]=useState<FolkloreRef|null>(null)
