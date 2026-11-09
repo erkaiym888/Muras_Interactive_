@@ -17,6 +17,7 @@ function Hotspot({ k, active, select }: { k: PartKey; active: boolean; select: (
     <g className="hs-in">
     <circle className="hs-hit" r="24"/>
     <circle className="hs-pulse" r="14"/>
+    <circle className="hs-ring" r="21"/>
     <circle className="hs-dot" r="9"/>
     <g className="hs-tip" transform={`translate(${left ? -w - 18 : 18} -15)`}>
       <rect width={w} height="30" rx="15"/>
@@ -65,5 +66,8 @@ export default function AuthenticYurtDiagram({ selected, select }: { selected: P
       {partKeys.filter(k => k !== selected).map(k => <Hotspot key={k} k={k} active={false} select={select}/>)}
       <Hotspot k={selected} active select={select}/>
     </svg>
+    <div className="touch-list" role="group" aria-label="Все элементы юрты">
+      {partKeys.map(k => <button key={k} className={k === selected ? 'active' : ''} aria-pressed={k === selected} onClick={() => select(k)}><b>{yurtParts[k].no}</b>{yurtParts[k].name}</button>)}
+    </div>
   </div>
 }
