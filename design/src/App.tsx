@@ -6,11 +6,12 @@ import { Folklore, FolkloreDetail } from './Folklore'
 import type { FolkloreRef } from './Folklore'
 import { canEditContent, fetchMe, logout } from './api'
 import { Editor } from './Editor'
+import { Quizzes } from './Quizzes'
 import type { User } from './api'
 import AuthenticYurtDiagram from './AuthenticYurtDiagram'
 import { PartKey, partKeys, YURT_IMAGE, yurtParts, yurtSize } from './yurt'
 
-type Page = 'home' | 'yurt' | 'yurt-detail' | 'traditions' | 'tradition-detail' | 'folklore' | 'folklore-detail' | 'editor' | 'login' | 'register' | 'recover' | 'reset'
+type Page = 'home' | 'yurt' | 'yurt-detail' | 'traditions' | 'tradition-detail' | 'folklore' | 'folklore-detail' | 'editor' | 'quizzes' | 'login' | 'register' | 'recover' | 'reset'
 
 const Arrow = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 6l6 6-6 6"/></svg>
 const Eye = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
@@ -24,6 +25,7 @@ const NAV = [
   { label: 'Юрта', p: 'yurt', note: 'Интерактивная экспозиция' },
   { label: 'Традиции', p: 'traditions', note: 'Обряды и обычаи' },
   { label: 'Фольклор', p: 'folklore', note: 'Герои и произведения' },
+  { label: 'Викторины', p: 'quizzes', note: 'Проверьте знания' },
 ] as const
 
 const ROLE_LABEL: Record<string, string> = { ADMIN: 'Администратор', EDITOR: 'Редактор контента', USER: 'Посетитель' }
@@ -68,7 +70,6 @@ function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => voi
         {items.map((n, i) => <button key={n.p} className={page === n.p || page === `${n.p}-detail` ? 'active' : ''} aria-current={page === n.p ? 'page' : undefined} onClick={() => to(n.p)}>
           <em>{String(i + 1).padStart(2, '0')}</em><span><b>{n.label}</b><small>{n.note}</small></span>
         </button>)}
-        <button className="soon" disabled><em>{String(items.length + 1).padStart(2, '0')}</em><span><b>Викторины</b><small>Скоро</small></span></button>
       </nav>
       <div className="drawer-account">
         {user ? <>
@@ -159,7 +160,7 @@ export default function App() {
   const [riteId,setRiteId]=useState<number|null>(null)
   const [folkloreRef,setFolkloreRef]=useState<FolkloreRef|null>(null)
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
-  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
+  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef}/>:page==='quizzes'?<Quizzes user={user} go={go}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
   const auth=['login','register','recover','reset'].includes(page)
   return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} {content} {!auth&&<Footer go={go}/>}</div>
 }

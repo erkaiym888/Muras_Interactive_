@@ -202,3 +202,35 @@ export const editorCategories = () => getAuthed<EditorCategory[]>('/api/editor/r
 export const createCategory = (name: string) => send<EditorCategory>('POST', '/api/editor/rite-categories', { name })
 export const renameCategory = (id: number, name: string) => send<EditorCategory>('PUT', `/api/editor/rite-categories/${id}`, { name })
 export const deleteCategory = (id: number) => send<void>('DELETE', `/api/editor/rite-categories/${id}`)
+
+// ---------- Викторины (FR-5.1) ----------
+
+export type QuizTopic = 'YURT' | 'RITES' | 'FOLKLORE'
+export type QuizDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
+export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'MATCHING'
+
+export type QuizSummary = {
+  id: number
+  title: string
+  topic: QuizTopic
+  difficulty: QuizDifficulty
+  description: string | null
+  questionCount: number
+}
+
+export type QuizOption = { id: number; text: string }
+
+/** Для сопоставления options - левые части пар, matchChoices - перемешанные правые части. */
+export type QuizQuestion = {
+  id: number
+  type: QuestionType
+  text: string
+  points: number
+  options: QuizOption[]
+  matchChoices: string[]
+}
+
+export type Quiz = Omit<QuizSummary, 'questionCount'> & { questions: QuizQuestion[] }
+
+export const fetchQuizzes = () => getAuthed<QuizSummary[]>('/api/quizzes')
+export const fetchQuiz = (id: number) => getAuthed<Quiz>(`/api/quizzes/${id}`)
