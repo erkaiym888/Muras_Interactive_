@@ -4,6 +4,8 @@ import kg.murasinteractive.quiz.model.QuizAttempt;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 
 public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> {
 
@@ -12,4 +14,10 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
 
     /** Сколько раз викторина завершена с начала суток - для лимита бонуса за завершение. */
     long countByUser_UserIdAndQuiz_QuizIdAndCompletedAtGreaterThanEqual(Long userId, Long quizId, Instant from);
+
+    /** История прохождений пользователя, новые сверху (FR-5.4). */
+    List<QuizAttempt> findByUser_UserIdOrderByCompletedAtDesc(Long userId);
+
+    /** Прохождение только своего пользователя: чужое не отдаём. */
+    Optional<QuizAttempt> findByAttemptIdAndUser_UserId(Long attemptId, Long userId);
 }
