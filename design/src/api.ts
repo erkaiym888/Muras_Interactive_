@@ -203,7 +203,7 @@ export const createCategory = (name: string) => send<EditorCategory>('POST', '/a
 export const renameCategory = (id: number, name: string) => send<EditorCategory>('PUT', `/api/editor/rite-categories/${id}`, { name })
 export const deleteCategory = (id: number) => send<void>('DELETE', `/api/editor/rite-categories/${id}`)
 
-// ---------- Викторины (FR-5.1) ----------
+// ---------- Викторины, избранное, личный кабинет (FR-5.1, FR-6.2) ----------
 
 export type QuizTopic = 'YURT' | 'RITES' | 'FOLKLORE'
 export type QuizDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
@@ -234,3 +234,25 @@ export type Quiz = Omit<QuizSummary, 'questionCount'> & { questions: QuizQuestio
 
 export const fetchQuizzes = () => getAuthed<QuizSummary[]>('/api/quizzes')
 export const fetchQuiz = (id: number) => getAuthed<Quiz>(`/api/quizzes/${id}`)
+
+export type FavoriteType = 'RITE' | 'HERO' | 'WORK'
+export type Favorite = { itemType: FavoriteType; itemId: number; title: string; subtitle: string }
+
+export const fetchFavoriteStatus = (type: FavoriteType, id: number) =>
+  getAuthed<{ favorite: boolean }>(`/api/favorites/status?itemType=${type}&itemId=${id}`)
+export const addFavorite = (type: FavoriteType, id: number) =>
+  send<void>('POST', '/api/favorites', { itemType: type, itemId: id })
+export const removeFavorite = (type: FavoriteType, id: number) =>
+  send<void>('DELETE', `/api/favorites?itemType=${type}&itemId=${id}`)
+
+export type CabinetHistoryItem = { quizTitle: string; scorePercent: number; pointsEarned: number; completedAt: string }
+export type CabinetAward = { title: string; description: string; awardedAt: string }
+
+export type Cabinet = {
+  profile: { displayName: string; email: string; role: string; registeredAt: string; totalPoints: number }
+  history: CabinetHistoryItem[]
+  awards: CabinetAward[]
+  favorites: Favorite[]
+}
+
+export const fetchCabinet = () => getAuthed<Cabinet>('/api/cabinet')
