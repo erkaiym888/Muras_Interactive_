@@ -235,6 +235,48 @@ export type Quiz = Omit<QuizSummary, 'questionCount'> & { questions: QuizQuestio
 export const fetchQuizzes = () => getAuthed<QuizSummary[]>('/api/quizzes')
 export const fetchQuiz = (id: number) => getAuthed<Quiz>(`/api/quizzes/${id}`)
 
+// ---------- Проверка ответов и очки (FR-5.2) ----------
+
+export type AttemptAnswer = { questionId: number; optionIds: number[]; pairs: Record<number, string>; hintUsed: boolean }
+export type PointLine = { code: string; label: string; points: number }
+export type QuestionResult = {
+  questionId: number | null
+  text: string
+  type: QuizQuestion['type']
+  correct: boolean
+  correctItems: number
+  totalItems: number
+  hintUsed: boolean
+  pointsEarned: number
+  maxPoints: number
+  userAnswer: string | null
+  correctAnswer: string | null
+  explanation: string | null
+}
+export type AttemptResult = {
+  attemptId: number
+  quizId: number
+  quizTitle: string
+  topic: QuizTopic
+  score: number
+  correctCount: number
+  questionCount: number
+  hintsUsed: number
+  bestStreak: number
+  repeatAttempt: boolean
+  pointsEarned: number
+  totalPoints: number
+  points: PointLine[]
+  questions: QuestionResult[]
+  completedAt: string
+}
+export type QuizHint = { available: boolean; text: string; hiddenOptionIds: number[]; revealedPairs: { optionId: number; match: string }[] }
+
+export const submitAttempt = (quizId: number, answers: AttemptAnswer[]) =>
+  send<AttemptResult>('POST', `/api/quizzes/${quizId}/attempts`, { answers })
+export const fetchHint = (quizId: number, questionId: number) =>
+  getAuthed<QuizHint>(`/api/quizzes/${quizId}/questions/${questionId}/hint`)
+
 export type FavoriteType = 'RITE' | 'HERO' | 'WORK'
 export type Favorite = { itemType: FavoriteType; itemId: number; title: string; subtitle: string }
 

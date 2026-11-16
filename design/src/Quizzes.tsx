@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import './features.css'
-import { fetchQuiz, fetchQuizzes } from './api'
-import type { Quiz, QuizQuestion, QuizSummary, User } from './api'
+import { ApiError, fetchHint, fetchQuiz, fetchQuizzes, submitAttempt } from './api'
+import type { AttemptResult, Quiz, QuizHint, QuizQuestion, QuizSummary, User } from './api'
+import { QuizResultView, TOPIC, pointsWord } from './QuizResult'
 
 type Status = 'loading' | 'ready' | 'error'
 
@@ -9,7 +10,6 @@ type Status = 'loading' | 'ready' | 'error'
 export type QuizAnswer = { optionIds: number[]; pairs: Record<number, string> }
 export type QuizAnswers = Record<number, QuizAnswer>
 
-const TOPIC: Record<string, string> = { YURT: 'Юрта', RITES: 'Обряды', FOLKLORE: 'Герои и фольклор' }
 const LEVEL: Record<string, string> = { EASY: 'Лёгкая', MEDIUM: 'Средняя', HARD: 'Сложная' }
 const HINT: Record<string, string> = {
   SINGLE_CHOICE: 'Выберите один ответ',
@@ -33,15 +33,16 @@ function isAnswered(question: QuizQuestion, answer: QuizAnswer) {
   return answer.optionIds.length > 0
 }
 
-function Question({ question, answer, onChange }: { question: QuizQuestion; answer: QuizAnswer; onChange: (a: QuizAnswer) => void }) {
+function Question({ question, answer, onChange, hint }: { question: QuizQuestion; answer: QuizAnswer; onChange: (a: QuizAnswer) => void; hint?: QuizHint }) {
   if (question.type === 'MATCHING') {
+    const locked = new Set((hint?.revealedPairs ?? []).map(p => p.optionId))
     return <fieldset className="quiz-opts">
       <legend>{HINT[question.type]}</legend>
       {question.options.map(o => {
         const taken = Object.entries(answer.pairs).filter(([id]) => Number(id) !== o.id).map(([, v]) => v)
-        return <div className="quiz-pair" key={o.id}>
+        return <div className={locked.has(o.id) ? 'quiz-pair revealed' : 'quiz-pair'} key={o.id}>
           <span id={`left-${o.id}`}>{o.text}</span>
-          <select aria-labelledby={`left-${o.id}`} value={answer.pairs[o.id] ?? ''} onChange={e => onChange({ ...answer, pairs: { ...answer.pairs, [o.id]: e.target.value } })}>
+          <select aria-labelledby={`left-${o.id}`} disabled={locked.has(o.id)} value={answer.pairs[o.id] ?? ''} onChange={e => onChange({ ...answer, pairs: { ...answer.pairs, [o.id]: e.target.value } })}>
             <option value="" disabled>Выберите…</option>
             {question.matchChoices.map(c => <option key={c} value={c} disabled={taken.includes(c)}>{c}</option>)}
           </select>
@@ -56,9 +57,10 @@ function Question({ question, answer, onChange }: { question: QuizQuestion; answ
     const ids = answer.optionIds.includes(id) ? answer.optionIds.filter(x => x !== id) : [...answer.optionIds, id]
     onChange({ ...answer, optionIds: ids })
   }
+  const hidden = new Set(hint?.hiddenOptionIds ?? [])
   return <fieldset className="quiz-opts">
     <legend>{HINT[question.type]}</legend>
-    {question.options.map(o => <label key={o.id}>
+    {question.options.filter(o => !hidden.has(o.id)).map(o => <label key={o.id}>
       <input type={multiple ? 'checkbox' : 'radio'} name={`q${question.id}`} checked={answer.optionIds.includes(o.id)} onChange={() => toggle(o.id)} />
       <span>{o.text}</span>
     </label>)}
@@ -70,7 +72,12 @@ function QuizPlayer({ quizId, onExit }: { quizId: number; onExit: () => void }) 
   const [status, setStatus] = useState<Status>('loading')
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState<QuizAnswers>({})
-  const [done, setDone] = useState(false)
+  const [hints, setHints] = useState<Record<number, QuizHint>>({})
+  const [hintBusy, setHintBusy] = useState(false)
+  const [result, setResult] = useState<AttemptResult | null>(null)
+  const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState('')
+  const [round, setRound] = useState(0)
 
   useEffect(() => {
     let alive = true
@@ -80,7 +87,45 @@ function QuizPlayer({ quizId, onExit }: { quizId: number; onExit: () => void }) 
       .then(q => { if (alive) { setQuiz(q); setStatus('ready') } })
       .catch(() => { if (alive) setStatus('error') })
     return () => { alive = false }
-  }, [quizId])
+  }, [quizId, round])
+
+  const restart = () => { setAnswers({}); setHints({}); setResult(null); setIndex(0); setSendError(''); setRound(r => r + 1) }
+
+  // Подсказка (FR-5.2): часть неверных вариантов убирается или показывается верная пара, очки за вопрос × 0,5
+  const takeHint = async (q: QuizQuestion) => {
+    setHintBusy(true)
+    try {
+      const h = await fetchHint(quizId, q.id)
+      setHints(prev => ({ ...prev, [q.id]: h }))
+      if (h.available) {
+        const cur = answers[q.id] ?? empty
+        const pairs = { ...cur.pairs }
+        h.revealedPairs.forEach(p => { pairs[p.optionId] = p.match })
+        const optionIds = cur.optionIds.filter(id => !h.hiddenOptionIds.includes(id))
+        setAnswers(prev => ({ ...prev, [q.id]: { optionIds, pairs } }))
+      }
+    } catch { setHints(prev => ({ ...prev, [q.id]: { available: false, text: 'Не удалось получить подсказку', hiddenOptionIds: [], revealedPairs: [] } })) }
+    finally { setHintBusy(false) }
+  }
+
+  // Ответы проверяет сервер: правильные варианты на клиент не приходят (FR-5.2)
+  const finish = async () => {
+    if (!quiz) return
+    setSending(true)
+    setSendError('')
+    try {
+      const payload = quiz.questions.map(q => ({
+        questionId: q.id,
+        optionIds: (answers[q.id] ?? empty).optionIds,
+        pairs: (answers[q.id] ?? empty).pairs,
+        hintUsed: Boolean(hints[q.id]?.available),
+      }))
+      setResult(await submitAttempt(quiz.id, payload))
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (e) {
+      setSendError(e instanceof ApiError && e.status === 401 ? 'Сессия закончилась. Войдите снова — ответы не сохранены.' : 'Не удалось отправить ответы. Попробуйте ещё раз.')
+    } finally { setSending(false) }
+  }
 
   const exit = <button className="back" onClick={onExit}>← К списку викторин</button>
 
@@ -90,16 +135,12 @@ function QuizPlayer({ quizId, onExit }: { quizId: number; onExit: () => void }) 
     </main>
   }
 
-  if (done) {
-    // Здесь собранные answers отправляются на проверку (FR-5.2): сервер сравнит их с правильными
-    // вариантами, покажет пояснения и начислит очки.
+  if (result) {
     return <main className="catalog">{exit}
-      <section className="quiz-run quiz-done">
-        <p className="kicker">{TOPIC[quiz.topic]}</p>
-        <h2>Викторина пройдена</h2>
-        <p>Вы ответили на все вопросы: {quiz.questions.length}.</p>
-        <div className="quiz-buttons"><button className="btn" onClick={onExit}>К списку викторин</button></div>
-      </section>
+      <QuizResultView result={result} actions={<>
+        <button className="btn" onClick={restart}>Пройти ещё раз</button>
+        <button className="btn outline" onClick={onExit}>К списку викторин</button>
+      </>} />
     </main>
   }
 
@@ -109,13 +150,19 @@ function QuizPlayer({ quizId, onExit }: { quizId: number; onExit: () => void }) 
 
   return <main className="catalog">{exit}
     <section className="quiz-run" aria-labelledby="quiz-q">
-      <div className="quiz-top"><span>{quiz.title}</span><span>Вопрос {index + 1} из {quiz.questions.length}</span></div>
+      <div className="quiz-top"><span>{quiz.title}</span><span>Вопрос {index + 1} из {quiz.questions.length} · {question.points} {pointsWord(question.points)}</span></div>
       <div className="quiz-progress" role="progressbar" aria-valuemin={0} aria-valuemax={quiz.questions.length} aria-valuenow={index + 1}><i style={{ width: `${((index + 1) / quiz.questions.length) * 100}%` }} /></div>
       <h2 id="quiz-q">{question.text}</h2>
-      <Question key={question.id} question={question} answer={answer} onChange={a => setAnswers({ ...answers, [question.id]: a })} />
+      <Question key={question.id} question={question} answer={answer} hint={hints[question.id]} onChange={a => setAnswers({ ...answers, [question.id]: a })} />
+      {question.type !== 'TRUE_FALSE' && <div className="quiz-hint">
+        {hints[question.id]
+          ? <p className={hints[question.id].available ? 'hint-on' : 'hint-off'} role="status">💡 {hints[question.id].text}</p>
+          : <button type="button" className="hint-btn" disabled={hintBusy} onClick={() => takeHint(question)}>💡 Подсказка <small>очки за вопрос × 0,5</small></button>}
+      </div>}
+      {sendError && <p className="quiz-error" role="alert">{sendError}</p>}
       <div className="quiz-actions">
-        <button className="btn outline" disabled={index === 0} onClick={() => setIndex(index - 1)}>Назад</button>
-        <button className="btn" disabled={!isAnswered(question, answer)} onClick={() => (last ? setDone(true) : setIndex(index + 1))}>{last ? 'Завершить' : 'Далее'}</button>
+        <button className="btn outline" disabled={index === 0 || sending} onClick={() => setIndex(index - 1)}>Назад</button>
+        <button className="btn" disabled={!isAnswered(question, answer) || sending} onClick={() => (last ? finish() : setIndex(index + 1))}>{last ? (sending ? 'Проверяем…' : 'Завершить и проверить') : 'Далее'}</button>
       </div>
     </section>
   </main>
