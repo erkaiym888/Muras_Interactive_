@@ -15,6 +15,13 @@ public interface RiteRepository extends JpaRepository<Rite, Long> {
     /** Все обряды в любом статусе - для редактора контента (FR-7.1). */
     List<Rite> findAllByOrderByRiteIdDesc();
 
+    /** Обратные связи (FR-3.3): опубликованные обряды, связанные с героем, произведением или элементом юрты. */
+    List<Rite> findByHeroes_HeroIdAndStatusOrderByTitleAsc(Long heroId, String status);
+
+    List<Rite> findByWorks_WorkIdAndStatusOrderByTitleAsc(Long workId, String status);
+
+    List<Rite> findByYurtElements_ElementKeyAndStatusOrderByTitleAsc(String elementKey, String status);
+
     boolean existsByRiteCategory_RiteCategoryId(Long riteCategoryId);
 
     long countByRiteCategory_RiteCategoryId(Long riteCategoryId);

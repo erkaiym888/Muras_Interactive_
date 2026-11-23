@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
  * - кыргызские названия (түндүк, бешик) дополнительно ищутся словарём simple без стемминга;
  * - на случай редких слов - совпадение подстроки в названии.
  * Название весит больше описания (веса A/B/C), совпадение в названии поднимает результат наверх.
- * Показываются только опубликованные обряды. Фронтенд показывает результаты выпадающим списком под строкой
+ * Показываются только опубликованные обряды, герои и произведения (статусы FR-7.2). Фронтенд показывает результаты выпадающим списком под строкой
  * поиска в шапке (как в Gmail).
  *
  * Опечатки (FR-4.2): если по запросу как есть найдено мало, каждое незнакомое слово заменяется
@@ -63,12 +63,14 @@ public class SearchService {
                        || setweight(to_tsvector('simple', coalesce(h.name, '')), 'A')
                        || setweight(to_tsvector('russian', coalesce(h.description, '')), 'B')
                 from folklore_hero h join folklore_type t on t.folklore_type_id = h.hero_type_id
+               where h.status = 'PUBLISHED'
               union all
               select 'work', w.work_id, null, w.title, t.type_name, coalesce(w.summary, ''),
                      setweight(to_tsvector('russian', coalesce(w.title, '')), 'A')
                        || setweight(to_tsvector('simple', coalesce(w.title, '')), 'A')
                        || setweight(to_tsvector('russian', coalesce(w.summary, '')), 'B')
                 from folklore_work w join folklore_type t on t.folklore_type_id = w.work_type_id
+               where w.status = 'PUBLISHED'
               union all
               select 'yurt', null, y.element_key, y.name, y.element_group, coalesce(y.description, ''),
                      setweight(to_tsvector('russian', coalesce(y.name, '')), 'A')
@@ -112,8 +114,8 @@ public class SearchService {
               select distinct w from (
                 select %1$s as w from rite r where r.status = 'PUBLISHED'
                 union all select %2$s from rite_step s join rite r on r.rite_id = s.rite_id where r.status = 'PUBLISHED'
-                union all select %3$s from folklore_hero h
-                union all select %4$s from folklore_work fw
+                union all select %3$s from folklore_hero h where h.status = 'PUBLISHED'
+                union all select %4$s from folklore_work fw where fw.status = 'PUBLISHED'
                 union all select %5$s from yurt_element y
               ) t where length(w) >= 3
             )

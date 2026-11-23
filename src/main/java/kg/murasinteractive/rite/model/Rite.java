@@ -1,10 +1,15 @@
 package kg.murasinteractive.rite.model;
 
 import jakarta.persistence.*;
+import kg.murasinteractive.folklore.model.FolkloreHero;
+import kg.murasinteractive.folklore.model.FolkloreWork;
 import kg.murasinteractive.media.model.MediaFile;
+import kg.murasinteractive.yurt.model.YurtElement;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /** Обряд или традиция (таблица rite). Поля карточки по FR-2.2. */
 @Entity
@@ -58,6 +63,28 @@ public class Rite {
             inverseJoinColumns = @JoinColumn(name = "media_id"))
     private List<MediaFile> media = new ArrayList<>();
 
+    /** Связи (FR-3.3): элементы юрты, герои и произведения, связанные с обрядом. Таблицы-связки по п. 4.4 ТЗ. */
+    @ManyToMany
+    @JoinTable(name = "rite_yurt_element",
+            joinColumns = @JoinColumn(name = "rite_id"),
+            inverseJoinColumns = @JoinColumn(name = "yurt_element_id"))
+    @OrderBy("sortOrder ASC")
+    private Set<YurtElement> yurtElements = new LinkedHashSet<>();
+
+    @ManyToMany
+    @JoinTable(name = "rite_folklore_hero",
+            joinColumns = @JoinColumn(name = "rite_id"),
+            inverseJoinColumns = @JoinColumn(name = "hero_id"))
+    @OrderBy("name ASC")
+    private Set<FolkloreHero> heroes = new LinkedHashSet<>();
+
+    @ManyToMany
+    @JoinTable(name = "rite_folklore_work",
+            joinColumns = @JoinColumn(name = "rite_id"),
+            inverseJoinColumns = @JoinColumn(name = "work_id"))
+    @OrderBy("title ASC")
+    private Set<FolkloreWork> works = new LinkedHashSet<>();
+
     public Rite() {}
 
     /** Добавляет этап с нужным номером. */
@@ -87,4 +114,7 @@ public class Rite {
     public void setStatus(String status) { this.status = status; }
     public List<RiteStep> getSteps() { return steps; }
     public List<MediaFile> getMedia() { return media; }
+    public Set<YurtElement> getYurtElements() { return yurtElements; }
+    public Set<FolkloreHero> getHeroes() { return heroes; }
+    public Set<FolkloreWork> getWorks() { return works; }
 }
