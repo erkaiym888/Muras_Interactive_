@@ -39,7 +39,12 @@ public record RiteForm(
 
         @Valid
         @Size(max = 20, message = "Не больше 20 изображений")
-        List<Image> images) {
+        List<Image> images,
+
+        /* Связи (FR-3.3); null - не менять. */
+        List<String> yurtElementKeys,
+        List<Long> heroIds,
+        List<Long> workIds) {
 
     public record Step(
             @Size(max = 200, message = "Название этапа не должно быть длиннее 200 символов")
