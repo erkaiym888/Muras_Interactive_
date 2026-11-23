@@ -205,6 +205,144 @@ export const createCategory = (name: string) => send<EditorCategory>('POST', '/a
 export const renameCategory = (id: number, name: string) => send<EditorCategory>('PUT', `/api/editor/rite-categories/${id}`, { name })
 export const deleteCategory = (id: number) => send<void>('DELETE', `/api/editor/rite-categories/${id}`)
 
+// ---------- Викторины, избранное, личный кабинет (FR-5.1, FR-6.2) ----------
+
+export type QuizTopic = 'YURT' | 'RITES' | 'FOLKLORE'
+export type QuizDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
+export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'MATCHING'
+
+export type QuizSummary = {
+  id: number
+  title: string
+  topic: QuizTopic
+  difficulty: QuizDifficulty
+  description: string | null
+  questionCount: number
+}
+
+export type QuizOption = { id: number; text: string }
+
+/** Для сопоставления options - левые части пар, matchChoices - перемешанные правые части. */
+export type QuizQuestion = {
+  id: number
+  type: QuestionType
+  text: string
+  points: number
+  options: QuizOption[]
+  matchChoices: string[]
+}
+
+export type Quiz = Omit<QuizSummary, 'questionCount'> & { questions: QuizQuestion[] }
+
+export const fetchQuizzes = () => getAuthed<QuizSummary[]>('/api/quizzes')
+export const fetchQuiz = (id: number) => getAuthed<Quiz>(`/api/quizzes/${id}`)
+
+// ---------- Проверка ответов и очки (FR-5.2) ----------
+
+export type AttemptAnswer = { questionId: number; optionIds: number[]; pairs: Record<number, string>; hintUsed: boolean }
+export type PointLine = { code: string; label: string; points: number }
+export type QuestionResult = {
+  questionId: number | null
+  text: string
+  type: QuizQuestion['type']
+  correct: boolean
+  correctItems: number
+  totalItems: number
+  hintUsed: boolean
+  pointsEarned: number
+  maxPoints: number
+  userAnswer: string | null
+  correctAnswer: string | null
+  explanation: string | null
+}
+export type AttemptResult = {
+  attemptId: number
+  quizId: number
+  quizTitle: string
+  topic: QuizTopic
+  score: number
+  correctCount: number
+  questionCount: number
+  hintsUsed: number
+  bestStreak: number
+  repeatAttempt: boolean
+  pointsEarned: number
+  totalPoints: number
+  points: PointLine[]
+  questions: QuestionResult[]
+  completedAt: string
+}
+export type QuizHint = { available: boolean; text: string; hiddenOptionIds: number[]; revealedPairs: { optionId: number; match: string }[] }
+
+export const submitAttempt = (quizId: number, answers: AttemptAnswer[]) =>
+  send<AttemptResult>('POST', `/api/quizzes/${quizId}/attempts`, { answers })
+export const fetchHint = (quizId: number, questionId: number) =>
+  getAuthed<QuizHint>(`/api/quizzes/${quizId}/questions/${questionId}/hint`)
+
+// ---------- История прохождений и прогресс (FR-5.4) ----------
+
+export type HistoryItem = {
+  attemptId: number
+  quizId: number
+  quizTitle: string
+  topic: QuizTopic
+  score: number
+  correctCount: number
+  questionCount: number
+  pointsEarned: number
+  repeatAttempt: boolean
+  completedAt: string
+}
+export type QuizProgress = {
+  quizId: number
+  title: string
+  topic: QuizTopic
+  difficulty: QuizDifficulty
+  attempts: number
+  bestScore: number | null
+  lastScore: number | null
+  lastCompletedAt: string | null
+  pointsEarned: number
+}
+export type Progress = {
+  totalPoints: number
+  quizzesTotal: number
+  quizzesCompleted: number
+  attemptsCount: number
+  averageBestScore: number
+  correctAnswers: number
+  answeredQuestions: number
+  bestStreak: number
+  topics: { topic: QuizTopic; quizzesTotal: number; quizzesCompleted: number; averageBestScore: number }[]
+  quizzes: QuizProgress[]
+}
+
+export const fetchHistory = (quizId?: number) =>
+  getAuthed<HistoryItem[]>(quizId ? `/api/quizzes/history?quizId=${quizId}` : '/api/quizzes/history')
+export const fetchAttempt = (attemptId: number) => getAuthed<AttemptResult>(`/api/quizzes/history/${attemptId}`)
+export const fetchProgress = () => getAuthed<Progress>('/api/quizzes/progress')
+
+export type FavoriteType = 'RITE' | 'HERO' | 'WORK'
+export type Favorite = { itemType: FavoriteType; itemId: number; title: string; subtitle: string }
+
+export const fetchFavoriteStatus = (type: FavoriteType, id: number) =>
+  getAuthed<{ favorite: boolean }>(`/api/favorites/status?itemType=${type}&itemId=${id}`)
+export const addFavorite = (type: FavoriteType, id: number) =>
+  send<void>('POST', '/api/favorites', { itemType: type, itemId: id })
+export const removeFavorite = (type: FavoriteType, id: number) =>
+  send<void>('DELETE', `/api/favorites?itemType=${type}&itemId=${id}`)
+
+export type CabinetHistoryItem = { attemptId: number; quizId: number; quizTitle: string; scorePercent: number; pointsEarned: number; repeatAttempt: boolean; completedAt: string }
+export type CabinetAward = { title: string; description: string; awardedAt: string }
+
+export type Cabinet = {
+  profile: { displayName: string; email: string; role: string; registeredAt: string; totalPoints: number }
+  history: CabinetHistoryItem[]
+  awards: CabinetAward[]
+  favorites: Favorite[]
+}
+
+export const fetchCabinet = () => getAuthed<Cabinet>('/api/cabinet')
 // ---------- Редактор: фольклор (FR-7.1) ----------
 
 export type EditorImage = { url: string; caption: string }
