@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { t, useI18n } from './i18n'
 import { photos } from './data'
 import { fetchCategories, fetchRite, fetchRites } from './api'
 import type { RiteCategory, RiteDetail, RiteSort, RiteSummary } from './api'
@@ -26,8 +27,10 @@ export function Traditions({ openRite }: { openRite: (id: number) => void }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<RiteSort>('title')
   const [status, setStatus] = useState<Status>('loading')
+  // FR-8.2: при смене языка данные перезапрашиваются, а фильтр, поиск и сортировка остаются
+  const { lang } = useI18n()
 
-  useEffect(() => { fetchCategories().then(setCategories).catch(() => setStatus('error')) }, [])
+  useEffect(() => { fetchCategories().then(setCategories).catch(() => setStatus('error')) }, [lang])
 
   // Поиск отправляем, когда пользователь перестал печатать
   useEffect(() => {
@@ -42,15 +45,15 @@ export function Traditions({ openRite }: { openRite: (id: number) => void }) {
       .then(r => { if (alive) { setRites(r); setStatus('ready') } })
       .catch(() => alive && setStatus('error'))
     return () => { alive = false }
-  }, [cat, query, sort])
+  }, [cat, query, sort, lang])
 
   const filtered = cat !== null || query.trim() !== ''
   const reset = () => { setCat(null); setSearch(''); setQuery('') }
 
   return <main className="catalog">
-    <div className="page-title"><p className="kicker">КУЛЬТУРНЫЙ АРХИВ · 02</p><h1>Традиции и <i>обряды</i></h1><p>Живые ритуалы, сопровождающие человека от рождения и объединяющие кыргызские семьи.</p></div>
+    <div className="page-title"><p className="kicker">{t('traditions.kicker', 'КУЛЬТУРНЫЙ АРХИВ · 02')}</p><h1>{t('traditions.title', 'Традиции и')} <i>{t('traditions.titleAccent', 'обряды')}</i></h1><p>{t('traditions.lead', 'Живые ритуалы, сопровождающие человека от рождения и объединяющие кыргызские семьи.')}</p></div>
     <div className="filters" role="group" aria-label="Категория">
-      <button className={cat === null ? 'active' : ''} aria-pressed={cat === null} onClick={() => setCat(null)}>{ALL}</button>
+      <button className={cat === null ? 'active' : ''} aria-pressed={cat === null} onClick={() => setCat(null)}>{t('traditions.all', ALL)}</button>
       {categories.map(c => <button className={cat === c.id ? 'active' : ''} aria-pressed={cat === c.id} onClick={() => setCat(c.id)} key={c.id}>{c.name}</button>)}
     </div>
     <div className="catalog-tools">
@@ -80,18 +83,22 @@ export function Traditions({ openRite }: { openRite: (id: number) => void }) {
 export function TraditionDetail({ go, riteId }: { go: Go; riteId: number | null }) {
   const [rite, setRite] = useState<RiteDetail | null>(null)
   const [status, setStatus] = useState<Status>('loading')
+  const { lang } = useI18n()
+  const loadedId = useRef<number | null>(null)
 
   useEffect(() => {
     if (riteId === null) { setStatus('error'); return }
     let alive = true
-    setStatus('loading')
+    // FR-8.2: тот же обряд на другом языке - старый текст остаётся на экране, пока не придёт новый
+    if (loadedId.current !== riteId) setStatus('loading')
+    loadedId.current = riteId
     fetchRite(riteId)
       .then(r => { if (alive) { setRite(r); setStatus('ready') } })
       .catch(() => alive && setStatus('error'))
     return () => { alive = false }
-  }, [riteId])
+  }, [riteId, lang])
 
-  const back = <button className="back" onClick={() => go('traditions')}>← Назад в каталог</button>
+  const back = <button className="back" onClick={() => go('traditions')}>← {t('common.backToCatalog', 'Назад в каталог')}</button>
 
   if (status !== 'ready' || !rite) {
     return <main className="trad-detail">{back}
