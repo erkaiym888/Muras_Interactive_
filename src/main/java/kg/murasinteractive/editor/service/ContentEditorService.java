@@ -10,6 +10,8 @@ import kg.murasinteractive.folklore.repository.FolkloreHeroRepository;
 import kg.murasinteractive.folklore.repository.FolkloreWorkRepository;
 import kg.murasinteractive.yurt.model.YurtElement;
 import kg.murasinteractive.yurt.repository.YurtElementRepository;
+import kg.murasinteractive.i18n.repository.ContentTranslationRepository;
+import kg.murasinteractive.i18n.service.Translatable;
 import kg.murasinteractive.media.model.MediaFile;
 import kg.murasinteractive.media.repository.MediaFileRepository;
 import kg.murasinteractive.rite.model.Rite;
@@ -39,16 +41,19 @@ public class ContentEditorService {
     private final YurtElementRepository yurtRepository;
     private final FolkloreHeroRepository heroRepository;
     private final FolkloreWorkRepository workRepository;
+    private final ContentTranslationRepository translationRepository;
 
     public ContentEditorService(RiteRepository riteRepository, RiteCategoryRepository categoryRepository,
                                 MediaFileRepository mediaFileRepository, YurtElementRepository yurtRepository,
-                                FolkloreHeroRepository heroRepository, FolkloreWorkRepository workRepository) {
+                                FolkloreHeroRepository heroRepository, FolkloreWorkRepository workRepository,
+                                ContentTranslationRepository translationRepository) {
         this.riteRepository = riteRepository;
         this.categoryRepository = categoryRepository;
         this.mediaFileRepository = mediaFileRepository;
         this.yurtRepository = yurtRepository;
         this.heroRepository = heroRepository;
         this.workRepository = workRepository;
+        this.translationRepository = translationRepository;
     }
 
     /** Что можно связать с обрядом (FR-3.3). */
@@ -94,9 +99,25 @@ public class ContentEditorService {
         return toForm(riteRepository.saveAndFlush(rite));
     }
 
+    /** Быстрая смена статуса обряда (FR-7.2). */
+    @Transactional
+    public RiteRow setRiteStatus(Long riteId, String status) {
+        Rite r = findRite(riteId);
+        // То же правило, что и в форме: в каталоге без аннотации карточка пустая
+        if (Rite.STATUS_PUBLISHED.equals(status) && (r.getSummary() == null || r.getSummary().isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Чтобы опубликовать «" + r.getTitle() + "», добавьте аннотацию в форме обряда");
+        }
+        r.setStatus(status);
+        return new RiteRow(r.getRiteId(), r.getTitle(), r.getRiteCategory().getRiteCategoryId(),
+                r.getRiteCategory().getCategoryName(), r.getStatus(), r.getSteps().size(),
+                r.getMedia().isEmpty() ? null : r.getMedia().get(0).getFilePath());
+    }
+
     @Transactional
     public void deleteRite(Long riteId) {
         riteRepository.delete(findRite(riteId));
+        translationRepository.deleteByEntityTypeAndEntityId(Translatable.RITE, riteId); // переводы (FR-8.1)
     }
 
     private Rite findRite(Long riteId) {
@@ -201,6 +222,7 @@ public class ContentEditorService {
                     "В категории есть обряды. Сначала перенесите или удалите их.");
         }
         categoryRepository.delete(category);
+        translationRepository.deleteByEntityTypeAndEntityId(Translatable.RITE_CATEGORY, categoryId);
     }
 
     private RiteCategory findCategory(Long categoryId) {
