@@ -8,8 +8,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -41,7 +44,8 @@ public class SearchService {
     /** Тексты этапов обряда одной строкой. */
     private static final String STEPS = "(select string_agg(concat_ws(' ', s.step_title, s.step_text), ' ') from rite_step s where s.rite_id = r.rite_id)";
 
-    private static final String SQL = """
+    /** Общая часть запросов: слова запроса (q) и все материалы с их текстом и весами (docs). */
+    private static final String DOCS = """
             with q as (select (to_tsquery('russian', :tsq) || to_tsquery('simple', :tsq)) as tsq),
             docs as (
               select 'rite'::text as kind, r.rite_id::bigint as id, null::text as key, r.title::text as title,
@@ -72,14 +76,34 @@ public class SearchService {
                        || setweight(to_tsvector('russian', coalesce(y.description, '')), 'B')
                 from yurt_element y
             )
+            """.formatted(STEPS);
+
+    /** Условие совпадения + фильтр по видам материалов (FR-4.3). */
+    private static final String MATCH = """
+             where (d.doc @@ q.tsq or d.title ilike :like escape '\\')
+               and (:allKinds or d.kind in (:kinds))
+            """;
+
+    private static final String SQL = DOCS + """
             select d.kind, d.id, d.key, d.title, d.subtitle,
                    ts_headline('russian', d.body, q.tsq,
                      'StartSel=[[, StopSel=]], MaxWords=26, MinWords=12, ShortWord=2, MaxFragments=1, FragmentDelimiter=" … "') as snippet
               from docs d cross join q
-             where d.doc @@ q.tsq or d.title ilike :like escape '\\'
+            """ + MATCH + """
              order by ts_rank_cd(d.doc, q.tsq) + case when d.title ilike :like escape '\\' then 1 else 0 end desc, d.title
              limit :limit
-            """.formatted(STEPS);
+            """;
+
+    /** Сколько найдено каждого вида - для групп и фильтра в выпадающем списке (FR-4.3). Без фильтра по виду. */
+    private static final String COUNTS = DOCS + """
+            select d.kind, count(*) as n
+              from docs d cross join q
+             where d.doc @@ q.tsq or d.title ilike :like escape '\\'
+             group by d.kind
+            """;
+
+    /** Виды материалов в порядке групп. */
+    public static final List<String> KINDS = List.of("rite", "hero", "work", "yurt");
 
     /** Все слова текстов сайта (из опубликованного) - словарь для исправления опечаток. */
     private static final String SPLIT = "regexp_split_to_table(lower(concat_ws(' ', %s)), '[^[:alpha:][:digit:]]+')";
@@ -122,38 +146,59 @@ public class SearchService {
 
     @Transactional(readOnly = true)
     public SearchResponseDto search(String query, Integer limit) {
+        return search(query, limit, null);
+    }
+
+    /**
+     * @param kinds какие виды материалов показать (rite, hero, work, yurt); пусто - все (FR-4.3).
+     *              Счётчики по видам считаются всегда по всем видам - для групп и фильтра.
+     */
+    @Transactional(readOnly = true)
+    public SearchResponseDto search(String query, Integer limit, List<String> kinds) {
         int max = limit == null ? LIMIT : Math.max(1, Math.min(limit, LIMIT));
         String clean = query == null ? "" : query.trim();
         List<String> words = words(clean);
+        List<String> only = kinds == null ? List.of() : kinds.stream().filter(KINDS::contains).distinct().toList();
         if (clean.length() < MIN_LENGTH || words.isEmpty()) {
-            return new SearchResponseDto(clean, null, 0, List.of());
+            return new SearchResponseDto(clean, null, 0, emptyCounts(), List.of());
         }
-        // на один больше - чтобы понять, есть ли ещё
-        List<SearchResultDto> results = new ArrayList<>(find(words, clean, max + 1));
+        List<String> used = words;
+        String phrase = clean;
+        List<SearchResultDto> results = new ArrayList<>(find(words, clean, max, only));
         String corrected = null;
-        if (results.size() <= max && fuzzy.available()) {
+        // Опечатки (FR-4.2): мало найдено - пробуем исправленный запрос и добавляем найденное после точного
+        if (results.size() < max && fuzzy.available()) {
             List<String> fixed = correct(words);
             if (!fixed.equals(words)) {
                 Set<String> seen = new HashSet<>();
                 results.forEach(r -> seen.add(key(r)));
                 int before = results.size();
-                for (SearchResultDto r : find(fixed, String.join(" ", fixed), max + 1)) {
-                    if (results.size() > max) break;
+                for (SearchResultDto r : find(fixed, String.join(" ", fixed), max, only)) {
+                    if (results.size() >= max) break;
                     if (seen.add(key(r))) results.add(r);
                 }
-                if (results.size() > before) corrected = String.join(" ", fixed);
+                if (results.size() > before) {
+                    corrected = String.join(" ", fixed);
+                    if (before == 0) { used = fixed; phrase = corrected; }
+                }
             }
         }
-        boolean more = results.size() > max;
-        List<SearchResultDto> shown = more ? results.subList(0, max) : results;
-        // total: сколько показано, или «больше», если есть ещё (точный подсчёт для списка не нужен)
-        return new SearchResponseDto(clean, corrected, more ? max + 1 : shown.size(), List.copyOf(shown));
+        Map<String, Integer> counts = counts(used, phrase);
+        int total = only.isEmpty() ? counts.values().stream().mapToInt(Integer::intValue).sum()
+                : only.stream().mapToInt(k -> counts.getOrDefault(k, 0)).sum();
+        // Группы (FR-4.3): результаты по видам в постоянном порядке, внутри вида - по релевантности
+        List<SearchResultDto> grouped = results.stream()
+                .sorted(Comparator.comparingInt((SearchResultDto r) -> KINDS.indexOf(r.kind())))
+                .toList();
+        return new SearchResponseDto(clean, corrected, Math.max(total, grouped.size()), counts, grouped);
     }
 
-    private List<SearchResultDto> find(List<String> words, String phrase, int limit) {
+    private List<SearchResultDto> find(List<String> words, String phrase, int limit, List<String> kinds) {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("tsq", toTsQuery(words))
                 .addValue("like", "%" + escapeLike(phrase) + "%")
+                .addValue("allKinds", kinds.isEmpty())
+                .addValue("kinds", kinds.isEmpty() ? KINDS : kinds)
                 .addValue("limit", limit);
         return jdbc.query(SQL, params, (rs, i) -> new SearchResultDto(
                 rs.getString("kind"),
@@ -162,6 +207,22 @@ public class SearchService {
                 rs.getString("title"),
                 rs.getString("subtitle"),
                 rs.getString("snippet")));
+    }
+
+    /** Сколько найдено каждого вида (все виды, даже нулевые - в постоянном порядке). */
+    private Map<String, Integer> counts(List<String> words, String phrase) {
+        Map<String, Integer> counts = emptyCounts();
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tsq", toTsQuery(words))
+                .addValue("like", "%" + escapeLike(phrase) + "%");
+        jdbc.query(COUNTS, params, rs -> { counts.put(rs.getString("kind"), rs.getInt("n")); });
+        return counts;
+    }
+
+    private static Map<String, Integer> emptyCounts() {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        KINDS.forEach(k -> counts.put(k, 0));
+        return counts;
     }
 
     /** Исправляет слова, которых нет в текстах сайта; знакомые и короткие оставляет как есть. */

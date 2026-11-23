@@ -208,7 +208,8 @@ export const deleteCategory = (id: number) => send<void>('DELETE', `/api/editor/
 export type SearchKind = 'rite' | 'hero' | 'work' | 'yurt'
 export type SearchResult = { kind: SearchKind; id: number | null; key: string | null; title: string; subtitle: string | null; snippet: string | null }
 /** corrected - исправленный запрос, если были опечатки (FR-4.2) */
-export type SearchResponse = { query: string; corrected: string | null; total: number; results: SearchResult[] }
+export type SearchResponse = { query: string; corrected: string | null; total: number; counts: Record<SearchKind, number>; results: SearchResult[] }
 
-export const search = (q: string, limit?: number) =>
-  getJson<SearchResponse>(`/api/search?q=${encodeURIComponent(q)}${limit ? `&limit=${limit}` : ''}`)
+/** kind - показать только этот вид материала (FR-4.3) */
+export const search = (q: string, limit?: number, kind?: SearchKind | null) =>
+  getJson<SearchResponse>(`/api/search?q=${encodeURIComponent(q)}${limit ? `&limit=${limit}` : ''}${kind ? `&kind=${kind}` : ''}`)
