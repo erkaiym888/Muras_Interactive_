@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import './features.css'
-import { canEditContent, fetchCabinet, removeFavorite } from './api'
-import type { Cabinet as CabinetData, Favorite, User } from './api'
+import { canEditContent, fetchCabinet, fetchProgress, removeFavorite } from './api'
+import type { Cabinet as CabinetData, Favorite, Progress, User } from './api'
+import { AttemptDetail, ProgressPanel, formatDateTime } from './QuizHistory'
 import type { FolkloreRef } from './Folklore'
 
 type Status = 'loading' | 'ready' | 'error'
@@ -19,6 +20,8 @@ export function Cabinet({ user, go, openRite, openItem }: {
 }) {
   const [data, setData] = useState<CabinetData | null>(null)
   const [status, setStatus] = useState<Status>('loading')
+  const [progress, setProgress] = useState<Progress | null>(null)
+  const [openAttempt, setOpenAttempt] = useState<number | null>(null)
   const userId = user?.id
 
   useEffect(() => {
@@ -28,6 +31,7 @@ export function Cabinet({ user, go, openRite, openItem }: {
     fetchCabinet()
       .then(d => { if (alive) { setData(d); setStatus('ready') } })
       .catch(() => { if (alive) setStatus('error') })
+    fetchProgress().then(p => { if (alive) setProgress(p) }).catch(() => {})
     return () => { alive = false }
   }, [userId])
 
@@ -75,10 +79,19 @@ export function Cabinet({ user, go, openRite, openItem }: {
           {data.awards.length === 0 ? <p className="cab-empty">Наград пока нет. Они появятся за прохождение викторин и изучение материалов.</p>
             : <ul className="cab-list">{data.awards.map(a => <li key={a.title}><span><b>{a.title}</b><small>{a.description}</small></span><small>{formatDate(a.awardedAt)}</small></li>)}</ul>}
         </section>
+        {progress && progress.attemptsCount > 0 && <section className="cab-card">
+          <h2>Прогресс в викторинах</h2>
+          <ProgressPanel progress={progress} />
+        </section>}
         <section className="cab-card">
           <h2>История викторин</h2>
-          {data.history.length === 0 ? <p className="cab-empty">Вы ещё не проходили викторины.</p>
-            : <ul className="cab-list">{data.history.map((h, i) => <li key={i}><span><b>{h.quizTitle}</b><small>{h.scorePercent}% · +{h.pointsEarned} очков</small></span><small>{formatDate(h.completedAt)}</small></li>)}</ul>}
+          {openAttempt !== null ? <AttemptDetail attemptId={openAttempt} onBack={() => setOpenAttempt(null)} />
+            : data.history.length === 0 ? <p className="cab-empty">Вы ещё не проходили викторины.</p>
+            : <ul className="cab-list">{data.history.map(h => <li key={h.attemptId}>
+              <span><button className="cab-link" onClick={() => setOpenAttempt(h.attemptId)}>{h.quizTitle}</button>
+                <small>{h.scorePercent}% · +{h.pointsEarned} очков{h.repeatAttempt ? ' · повторно' : ''}</small></span>
+              <small>{formatDateTime(h.completedAt)}</small>
+            </li>)}</ul>}
         </section>
         <section className="cab-card">
           <h2>Избранное</h2>
