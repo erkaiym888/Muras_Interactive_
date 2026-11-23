@@ -202,3 +202,12 @@ export const editorCategories = () => getAuthed<EditorCategory[]>('/api/editor/r
 export const createCategory = (name: string) => send<EditorCategory>('POST', '/api/editor/rite-categories', { name })
 export const renameCategory = (id: number, name: string) => send<EditorCategory>('PUT', `/api/editor/rite-categories/${id}`, { name })
 export const deleteCategory = (id: number) => send<void>('DELETE', `/api/editor/rite-categories/${id}`)
+
+// ---------- Поиск (FR-4.1) ----------
+
+export type SearchKind = 'rite' | 'hero' | 'work' | 'yurt'
+export type SearchResult = { kind: SearchKind; id: number | null; key: string | null; title: string; subtitle: string | null; snippet: string | null }
+export type SearchResponse = { query: string; total: number; results: SearchResult[] }
+
+export const search = (q: string, limit?: number) =>
+  getJson<SearchResponse>(`/api/search?q=${encodeURIComponent(q)}${limit ? `&limit=${limit}` : ''}`)

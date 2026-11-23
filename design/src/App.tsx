@@ -6,7 +6,8 @@ import { Folklore, FolkloreDetail } from './Folklore'
 import type { FolkloreRef } from './Folklore'
 import { canEditContent, fetchMe, logout } from './api'
 import { Editor } from './Editor'
-import type { User } from './api'
+import type { SearchResult, User } from './api'
+import { HeaderSearch } from './Search'
 import AuthenticYurtDiagram from './AuthenticYurtDiagram'
 import { PartKey, partKeys, YURT_IMAGE, yurtParts, yurtSize } from './yurt'
 
@@ -29,7 +30,7 @@ const NAV = [
 const ROLE_LABEL: Record<string, string> = { ADMIN: 'Администратор', EDITOR: 'Редактор контента', USER: 'Посетитель' }
 
 /** Шапка: только логотип и кнопка меню. Все разделы и аккаунт - в выезжающей панели. */
-function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => void; user: User | null; onLogout: () => void }) {
+function Header({ page, go, user, onLogout, onFound }: { page: Page; go: (p: Page) => void; user: User | null; onLogout: () => void; onFound: (r: SearchResult) => void }) {
   const [open, setOpen] = useState(false)
   const burger = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLDivElement>(null)
@@ -58,6 +59,7 @@ function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => voi
 
   return <header className="header">
     <Logo onClick={() => go('home')} />
+    <HeaderSearch onOpen={onFound} />
     <button ref={burger} className={open ? 'burger open' : 'burger'} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="site-menu" aria-label={open ? 'Закрыть меню' : 'Открыть меню'}>
       <span className="burger-label">Меню</span><span className="burger-lines" aria-hidden="true"><i/><i/><i/></span>
     </button>
@@ -88,7 +90,7 @@ function Button({ children, secondary, onClick, type='button' }: { children: Rea
 }
 
 function Footer({ go }: { go: (p: Page) => void }) {
-  return <footer><div><Logo onClick={() => go('home')} /><p>Цифровой музей живого наследия Кыргызстана.</p></div><div className="footer-links"><button onClick={() => go('yurt')}>Исследовать юрту</button><button onClick={() => go('traditions')}>Традиции</button><span>© 2025 Muras Interactive</span></div></footer>
+  return <footer><div><Logo onClick={() => go('home')} /><p>Цифровой музей живого наследия Кыргызстана.</p></div><div className="footer-links"><button onClick={() => go('yurt')}>Исследовать юрту</button><button onClick={() => go('traditions')}>Традиции</button><span>© 2026 Muras Interactive</span></div></footer>
 }
 
 function Home({ go }: { go: (p: Page) => void }) {
@@ -159,7 +161,13 @@ export default function App() {
   const [riteId,setRiteId]=useState<number|null>(null)
   const [folkloreRef,setFolkloreRef]=useState<FolkloreRef|null>(null)
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
+  // Выбран вариант в поиске (FR-4.1) - открываем нужный раздел
+  const openFound=(r:SearchResult)=>{
+    if(r.kind==='rite'&&r.id!==null){setRiteId(r.id);go('tradition-detail')}
+    else if((r.kind==='hero'||r.kind==='work')&&r.id!==null){setFolkloreRef({kind:r.kind,id:r.id});go('folklore-detail')}
+    else if(r.kind==='yurt'&&r.key&&(partKeys as string[]).includes(r.key)){setPart(r.key as PartKey);go('yurt')}
+  }
   const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
   const auth=['login','register','recover','reset'].includes(page)
-  return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} {content} {!auth&&<Footer go={go}/>}</div>
+  return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout} onFound={openFound}/>} {content} {!auth&&<Footer go={go}/>}</div>
 }
