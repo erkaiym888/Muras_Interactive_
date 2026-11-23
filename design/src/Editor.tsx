@@ -7,6 +7,7 @@ import {
 import type { EditorCategory, EditorRiteRow, RiteForm, RiteStatus, User } from './api'
 import { Field, ImagesField, STATUS, STATUSES, StatusOptions, StatusSelect, errorText, imageErrors } from './EditorFields'
 import { FolkloreEditor } from './FolkloreEditor'
+import { Translations } from './Translations'
 import type { FolkloreRef } from './Folklore'
 
 /**
@@ -28,7 +29,7 @@ const normalize = (f: RiteForm): RiteForm => ({
   images: (f.images ?? []).map(i => ({ url: i.url ?? '', caption: i.caption ?? '' })),
 })
 
-type View = { tab: 'rites' } | { tab: 'form'; id: number | null } | { tab: 'folklore' } | { tab: 'categories' }
+type View = { tab: 'rites' } | { tab: 'form'; id: number | null } | { tab: 'folklore' } | { tab: 'categories' } | { tab: 'translations' }
 
 export function Editor({ user, goLogin, openRite, openFolklore }: {
   user: User | null; goLogin: () => void; openRite: (id: number) => void; openFolklore: (ref: FolkloreRef) => void
@@ -63,10 +64,12 @@ export function Editor({ user, goLogin, openRite, openFolklore }: {
       <button role="tab" aria-selected={ritesTab} className={ritesTab ? 'active' : ''} onClick={() => setView({ tab: 'rites' })}>Обряды</button>
       <button role="tab" aria-selected={view.tab === 'categories'} className={view.tab === 'categories' ? 'active' : ''} onClick={() => setView({ tab: 'categories' })}>Категории обрядов</button>
       <button role="tab" aria-selected={view.tab === 'folklore'} className={view.tab === 'folklore' ? 'active' : ''} onClick={() => setView({ tab: 'folklore' })}>Фольклор</button>
+      <button role="tab" aria-selected={view.tab === 'translations'} className={view.tab === 'translations' ? 'active' : ''} onClick={() => setView({ tab: 'translations' })}>Переводы</button>
     </div>
     {view.tab === 'rites' && <RiteList onEdit={id => setView({ tab: 'form', id })} onCreate={() => setView({ tab: 'form', id: null })} openRite={openRite} notify={setToast} />}
     {view.tab === 'form' && <RiteEditor id={view.id} onCancel={() => setView({ tab: 'rites' })} onSaved={saved} />}
     {view.tab === 'categories' && <Categories notify={setToast} />}
+    {view.tab === 'translations' && <Translations notify={setToast} />}
     {view.tab === 'folklore' && <FolkloreEditor notify={setToast} openFolklore={openFolklore} />}
     <div className={toast ? 'editor-toast show' : 'editor-toast'} role="status" aria-live="polite">{toast}</div>
   </main>

@@ -21,6 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import kg.murasinteractive.i18n.repository.ContentTranslationRepository;
+import kg.murasinteractive.i18n.service.Translatable;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -37,9 +40,12 @@ public class FolkloreEditorService {
     private final FolkloreWorkRepository workRepository;
     private final FolkloreTypeRepository typeRepository;
     private final MediaFileRepository mediaFileRepository;
+    private final ContentTranslationRepository translationRepository;
 
     public FolkloreEditorService(FolkloreHeroRepository heroRepository, FolkloreWorkRepository workRepository,
-                                 FolkloreTypeRepository typeRepository, MediaFileRepository mediaFileRepository) {
+                                 FolkloreTypeRepository typeRepository, MediaFileRepository mediaFileRepository,
+                                 ContentTranslationRepository translationRepository) {
+        this.translationRepository = translationRepository;
         this.heroRepository = heroRepository;
         this.workRepository = workRepository;
         this.typeRepository = typeRepository;
@@ -98,6 +104,7 @@ public class FolkloreEditorService {
     @Transactional
     public void deleteHero(Long heroId) {
         heroRepository.delete(findHero(heroId));
+        translationRepository.deleteByEntityTypeAndEntityId(Translatable.FOLKLORE_HERO, heroId); // переводы (FR-8.1)
     }
 
     private void applyHero(FolkloreHero hero, FolkloreHeroForm form) {
@@ -158,6 +165,7 @@ public class FolkloreEditorService {
         }
         work.getHeroes().clear();
         workRepository.delete(work);
+        translationRepository.deleteByEntityTypeAndEntityId(Translatable.FOLKLORE_WORK, workId);
     }
 
     private void applyWork(FolkloreWork work, FolkloreWorkForm form) {

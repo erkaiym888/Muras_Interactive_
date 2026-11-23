@@ -1,4 +1,5 @@
 // Запросы к Spring Boot. Адрес /api в разработке проксируется на localhost:8080 (см. vite.config.ts).
+import { currentLang } from './i18n'
 
 export type RiteCategory = { id: number; name: string }
 
@@ -26,8 +27,11 @@ export type RiteDetail = {
   images: RiteImage[]
 }
 
+/** Язык контента для сервера (FR-8.1): сервер подставит переводы, если они есть. */
+const langHeaders = (): Record<string, string> => ({ 'X-Lang': currentLang() })
+
 async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url)
+  const response = await fetch(url, { headers: langHeaders() })
   if (!response.ok) throw new Error(`Ошибка ${response.status}`)
   return response.json() as Promise<T>
 }
@@ -93,7 +97,7 @@ async function send<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string,
   if (!csrfResponse.ok) throw await toApiError(csrfResponse)
   const csrf = (await csrfResponse.json()) as { token: string; headerName: string }
 
-  const headers: Record<string, string> = { [csrf.headerName]: csrf.token }
+  const headers: Record<string, string> = { [csrf.headerName]: csrf.token, ...langHeaders() }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   const response = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
   if (!response.ok) throw await toApiError(response)
@@ -102,7 +106,7 @@ async function send<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string,
 }
 
 async function getAuthed<T>(url: string): Promise<T> {
-  const response = await fetch(url)
+  const response = await fetch(url, { headers: langHeaders() })
   if (!response.ok) throw await toApiError(response)
   return response.json() as Promise<T>
 }
@@ -274,3 +278,23 @@ export const adminUsers = () => getAuthed<AdminUserRow[]>('/api/admin/users')
 export const adminRoles = () => getAuthed<AdminRole[]>('/api/admin/roles')
 export const setUserRole = (id: number, role: Role) => send<AdminUserRow>('PATCH', `/api/admin/users/${id}/role`, { role })
 export const setUserBlocked = (id: number, blocked: boolean) => send<AdminUserRow>('PATCH', `/api/admin/users/${id}/blocked`, { blocked })
+
+// ---------- Языки и переводы (FR-8.1) ----------
+
+export type AdminLanguage = { code: string; name: string; nativeName: string; enabled: boolean; defaultLanguage: boolean; translationCount: number }
+export const adminLanguages = () => getAuthed<AdminLanguage[]>('/api/admin/languages')
+export const toggleLanguage = (code: string, enabled: boolean) => send<AdminLanguage>('PATCH', `/api/admin/languages/${code}`, { enabled })
+
+export type TranslationKind = { type: string; title: string }
+export type TranslationMeta = { kinds: TranslationKind[]; languages: AdminLanguage[] }
+export type TranslationItem = { id: number; title: string; filled: number; total: number }
+export type TranslationField = { field: string; label: string; original: string; translation: string | null; multiline: boolean }
+export type TranslationForm = { type: string; id: number; title: string; language: string; fields: TranslationField[] }
+
+export const translationMeta = () => getAuthed<TranslationMeta>('/api/editor/translations')
+export const translationItems = (type: string, lang: string) =>
+  getAuthed<TranslationItem[]>(`/api/editor/translations/${type}?lang=${encodeURIComponent(lang)}`)
+export const translationForm = (type: string, id: number, lang: string) =>
+  getAuthed<TranslationForm>(`/api/editor/translations/${type}/${id}?lang=${encodeURIComponent(lang)}`)
+export const saveTranslation = (type: string, id: number, lang: string, fields: Record<string, string>) =>
+  send<TranslationForm>('PUT', `/api/editor/translations/${type}/${id}?lang=${encodeURIComponent(lang)}`, { fields })

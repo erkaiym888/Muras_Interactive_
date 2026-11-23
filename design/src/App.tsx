@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from 'react'
+import { Fragment, ReactNode, useEffect, useRef, useState } from 'react'
 import { photos } from './data'
 import { Traditions, TraditionDetail } from './Traditions'
 import { Auth } from './Auth'
@@ -6,6 +6,7 @@ import { Folklore, FolkloreDetail } from './Folklore'
 import type { FolkloreRef } from './Folklore'
 import { canEditContent, fetchMe, isAdmin, logout } from './api'
 import { Admin } from './Admin'
+import { initLanguages, t, useI18n } from './i18n'
 import { Editor } from './Editor'
 import type { User } from './api'
 import AuthenticYurtDiagram from './AuthenticYurtDiagram'
@@ -20,18 +21,32 @@ function Logo({ onClick }: { onClick: () => void }) {
   return <button className="logo" onClick={onClick} aria-label="На главную"><span className="logo-mark">М</span><span><b>MURAS</b><small>INTERACTIVE</small></span></button>
 }
 
-const NAV = [
-  { label: 'Главная', p: 'home', note: 'Цифровой музей наследия' },
-  { label: 'Юрта', p: 'yurt', note: 'Интерактивная экспозиция' },
-  { label: 'Традиции', p: 'traditions', note: 'Обряды и обычаи' },
-  { label: 'Фольклор', p: 'folklore', note: 'Герои и произведения' },
-] as const
+/** Разделы меню; подписи - через t(), чтобы их можно было перевести словарём (FR-8.1). */
+const NAV = () => [
+  { label: t('nav.home', 'Главная'), p: 'home' as Page, note: t('nav.home.note', 'Цифровой музей наследия') },
+  { label: t('nav.yurt', 'Юрта'), p: 'yurt' as Page, note: t('nav.yurt.note', 'Интерактивная экспозиция') },
+  { label: t('nav.traditions', 'Традиции'), p: 'traditions' as Page, note: t('nav.traditions.note', 'Обряды и обычаи') },
+  { label: t('nav.folklore', 'Фольклор'), p: 'folklore' as Page, note: t('nav.folklore.note', 'Герои и произведения') },
+]
 
-const ROLE_LABEL: Record<string, string> = { ADMIN: 'Администратор', EDITOR: 'Редактор контента', USER: 'Посетитель' }
+const ROLE_LABEL = (): Record<string, string> => ({
+  ADMIN: t('role.admin', 'Администратор'), EDITOR: t('role.editor', 'Редактор контента'), USER: t('role.user', 'Посетитель'),
+})
+
+/** Переключатель языка (FR-8.1/8.2); пока включён один язык - не показывается. */
+function LanguageSwitch() {
+  const { lang, languages, setLang } = useI18n()
+  if (languages.length < 2) return null
+  return <div className="lang-switch" role="group" aria-label={t('lang.label', 'Язык сайта')}>
+    {languages.map(l => <button key={l.code} className={l.code === lang ? 'active' : ''} aria-pressed={l.code === lang}
+      lang={l.code} onClick={() => setLang(l.code)}>{l.nativeName}</button>)}
+  </div>
+}
 
 /** Шапка: только логотип и кнопка меню. Все разделы и аккаунт - в выезжающей панели. */
 function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => void; user: User | null; onLogout: () => void }) {
   const [open, setOpen] = useState(false)
+  useI18n() // перерисовка подписей при смене языка
   const burger = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLDivElement>(null)
 
@@ -54,31 +69,32 @@ function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => voi
   }, [open])
 
   const to = (p: Page) => { setOpen(false); go(p) }
-  const items: { label: string; p: Page; note: string }[] = [...NAV]
-  if (canEditContent(user)) items.push({ label: 'Редактор', p: 'editor', note: 'Управление содержимым' })
-  if (isAdmin(user)) items.push({ label: 'Пользователи', p: 'admin', note: 'Роли и доступ' })
+  const items: { label: string; p: Page; note: string }[] = NAV()
+  if (canEditContent(user)) items.push({ label: t('nav.editor', 'Редактор'), p: 'editor', note: t('nav.editor.note', 'Управление содержимым') })
+  if (isAdmin(user)) items.push({ label: t('nav.admin', 'Пользователи'), p: 'admin', note: t('nav.admin.note', 'Роли, доступ и языки') })
 
   return <header className="header">
     <Logo onClick={() => go('home')} />
-    <button ref={burger} className={open ? 'burger open' : 'burger'} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="site-menu" aria-label={open ? 'Закрыть меню' : 'Открыть меню'}>
-      <span className="burger-label">Меню</span><span className="burger-lines" aria-hidden="true"><i/><i/><i/></span>
+    <button ref={burger} className={open ? 'burger open' : 'burger'} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="site-menu" aria-label={open ? t('menu.close', 'Закрыть меню') : t('menu.open', 'Открыть меню')}>
+      <span className="burger-label">{t('menu', 'Меню')}</span><span className="burger-lines" aria-hidden="true"><i/><i/><i/></span>
     </button>
     <div className={open ? 'drawer-backdrop show' : 'drawer-backdrop'} onClick={() => setOpen(false)} aria-hidden="true"/>
-    <div ref={panel} id="site-menu" className={open ? 'drawer open' : 'drawer'} role="dialog" aria-modal="true" aria-label="Меню сайта" inert={!open}>
-      <div className="drawer-top"><span className="kicker">MURAS INTERACTIVE</span><button className="drawer-close" onClick={() => setOpen(false)} aria-label="Закрыть меню">×</button></div>
-      <nav className="drawer-nav" aria-label="Разделы">
+    <div ref={panel} id="site-menu" className={open ? 'drawer open' : 'drawer'} role="dialog" aria-modal="true" aria-label={t('menu.site', 'Меню сайта')} inert={!open}>
+      <div className="drawer-top"><span className="kicker">MURAS INTERACTIVE</span><button className="drawer-close" onClick={() => setOpen(false)} aria-label={t('menu.close', 'Закрыть меню')}>×</button></div>
+      <LanguageSwitch />
+      <nav className="drawer-nav" aria-label={t('menu.sections', 'Разделы')}>
         {items.map((n, i) => <button key={n.p} className={page === n.p || page === `${n.p}-detail` ? 'active' : ''} aria-current={page === n.p ? 'page' : undefined} onClick={() => to(n.p)}>
           <em>{String(i + 1).padStart(2, '0')}</em><span><b>{n.label}</b><small>{n.note}</small></span>
         </button>)}
-        <button className="soon" disabled><em>{String(items.length + 1).padStart(2, '0')}</em><span><b>Викторины</b><small>Скоро</small></span></button>
+        <button className="soon" disabled><em>{String(items.length + 1).padStart(2, '0')}</em><span><b>{t('nav.quizzes', 'Викторины')}</b><small>{t('nav.soon', 'Скоро')}</small></span></button>
       </nav>
       <div className="drawer-account">
         {user ? <>
-          <p className="who"><span className="avatar" aria-hidden="true">{user.displayName.trim().charAt(0).toUpperCase()}</span><span><b>{user.displayName}</b><small>{ROLE_LABEL[user.role] ?? user.role}</small></span></p>
-          <button className="drawer-btn" onClick={() => { setOpen(false); onLogout() }}>Выйти из аккаунта <Arrow/></button>
+          <p className="who"><span className="avatar" aria-hidden="true">{user.displayName.trim().charAt(0).toUpperCase()}</span><span><b>{user.displayName}</b><small>{ROLE_LABEL()[user.role] ?? user.role}</small></span></p>
+          <button className="drawer-btn" onClick={() => { setOpen(false); onLogout() }}>{t('account.logout', 'Выйти из аккаунта')} <Arrow/></button>
         </> : <>
-          <p className="drawer-hint">Войдите, чтобы сохранять материалы и проходить викторины.</p>
-          <div className="drawer-auth"><button className="drawer-btn" onClick={() => to('login')}>Войти <Arrow/></button><button className="drawer-btn ghost" onClick={() => to('register')}>Регистрация</button></div>
+          <p className="drawer-hint">{t('account.hint', 'Войдите, чтобы сохранять материалы и проходить викторины.')}</p>
+          <div className="drawer-auth"><button className="drawer-btn" onClick={() => to('login')}>{t('account.login', 'Войти')} <Arrow/></button><button className="drawer-btn ghost" onClick={() => to('register')}>{t('account.register', 'Регистрация')}</button></div>
         </>}
       </div>
     </div>
@@ -90,7 +106,8 @@ function Button({ children, secondary, onClick, type='button' }: { children: Rea
 }
 
 function Footer({ go }: { go: (p: Page) => void }) {
-  return <footer><div><Logo onClick={() => go('home')} /><p>Цифровой музей живого наследия Кыргызстана.</p></div><div className="footer-links"><button onClick={() => go('yurt')}>Исследовать юрту</button><button onClick={() => go('traditions')}>Традиции</button><span>© 2025 Muras Interactive</span></div></footer>
+  useI18n()
+  return <footer><div><Logo onClick={() => go('home')} /><p>{t('footer.tagline', 'Цифровой музей живого наследия Кыргызстана.')}</p></div><div className="footer-links"><button onClick={() => go('yurt')}>{t('footer.yurt', 'Исследовать юрту')}</button><button onClick={() => go('traditions')}>{t('nav.traditions', 'Традиции')}</button><span>© 2025 Muras Interactive</span></div></footer>
 }
 
 function Home({ go }: { go: (p: Page) => void }) {
@@ -156,6 +173,9 @@ export default function App() {
   const [resetToken]=useState(()=>new URLSearchParams(window.location.search).get('reset')??'')
   const [user,setUser]=useState<User|null>(null)
   useEffect(()=>{fetchMe().then(setUser).catch(()=>setUser(null))},[])
+  useEffect(()=>{initLanguages()},[])
+  // При смене языка страница перезапрашивает данные, но остаётся той же (раздел, обряд, герой) - FR-8.2
+  const {lang}=useI18n()
   const doLogout=async()=>{try{await logout()}catch{/* всё равно считаем вышедшей */}finally{setUser(null);go('register')}}
   const [part,setPart]=useState<PartKey>('tunduk')
   const [riteId,setRiteId]=useState<number|null>(null)
@@ -163,5 +183,5 @@ export default function App() {
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
   const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}} openFolklore={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='admin'?<Admin user={user} goLogin={()=>go('login')}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
   const auth=['login','register','recover','reset'].includes(page)
-  return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} {content} {!auth&&<Footer go={go}/>}</div>
+  return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} <Fragment key={lang}>{content}</Fragment> {!auth&&<Footer go={go}/>}</div>
 }
