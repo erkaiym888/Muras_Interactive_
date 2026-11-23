@@ -1,4 +1,5 @@
 // Запросы к Spring Boot. Адрес /api в разработке проксируется на localhost:8080 (см. vite.config.ts).
+import { currentLang } from './i18n'
 
 export type RiteCategory = { id: number; name: string }
 
@@ -26,8 +27,11 @@ export type RiteDetail = {
   images: RiteImage[]
 }
 
+/** Язык контента для сервера (FR-8.1): сервер подставит переводы, если они есть. */
+const langHeaders = (): Record<string, string> => ({ 'X-Lang': currentLang() })
+
 async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url)
+  const response = await fetch(url, { headers: langHeaders() })
   if (!response.ok) throw new Error(`Ошибка ${response.status}`)
   return response.json() as Promise<T>
 }
@@ -88,12 +92,12 @@ async function post(url: string, body?: Record<string, string>, asForm = false):
 }
 
 /** Запрос с JSON-телом и CSRF-токеном (POST, PUT, DELETE). Возвращает ответ сервера, если он есть. */
-async function send<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body?: unknown): Promise<T> {
+async function send<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, body?: unknown): Promise<T> {
   const csrfResponse = await fetch('/api/auth/csrf')
   if (!csrfResponse.ok) throw await toApiError(csrfResponse)
   const csrf = (await csrfResponse.json()) as { token: string; headerName: string }
 
-  const headers: Record<string, string> = { [csrf.headerName]: csrf.token }
+  const headers: Record<string, string> = { [csrf.headerName]: csrf.token, ...langHeaders() }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   const response = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
   if (!response.ok) throw await toApiError(response)
@@ -102,7 +106,7 @@ async function send<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body?: un
 }
 
 async function getAuthed<T>(url: string): Promise<T> {
-  const response = await fetch(url)
+  const response = await fetch(url, { headers: langHeaders() })
   if (!response.ok) throw await toApiError(response)
   return response.json() as Promise<T>
 }
@@ -197,11 +201,241 @@ export const editorRite = (id: number) => getAuthed<RiteForm>(`/api/editor/rites
 export const createRite = (form: RiteForm) => send<RiteForm>('POST', '/api/editor/rites', form)
 export const updateRite = (id: number, form: RiteForm) => send<RiteForm>('PUT', `/api/editor/rites/${id}`, form)
 export const deleteRite = (id: number) => send<void>('DELETE', `/api/editor/rites/${id}`)
+/** Быстрая смена статуса из списка (FR-7.2). */
+export const setRiteStatus = (id: number, status: RiteStatus) => send<EditorRiteRow>('PATCH', `/api/editor/rites/${id}/status`, { status })
 
 export const editorCategories = () => getAuthed<EditorCategory[]>('/api/editor/rite-categories')
 export const createCategory = (name: string) => send<EditorCategory>('POST', '/api/editor/rite-categories', { name })
 export const renameCategory = (id: number, name: string) => send<EditorCategory>('PUT', `/api/editor/rite-categories/${id}`, { name })
 export const deleteCategory = (id: number) => send<void>('DELETE', `/api/editor/rite-categories/${id}`)
+
+// ---------- Викторины, избранное, личный кабинет (FR-5.1, FR-6.2) ----------
+
+export type QuizTopic = 'YURT' | 'RITES' | 'FOLKLORE'
+export type QuizDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
+export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'MATCHING'
+
+export type QuizSummary = {
+  id: number
+  title: string
+  topic: QuizTopic
+  difficulty: QuizDifficulty
+  description: string | null
+  questionCount: number
+}
+
+export type QuizOption = { id: number; text: string }
+
+/** Для сопоставления options - левые части пар, matchChoices - перемешанные правые части. */
+export type QuizQuestion = {
+  id: number
+  type: QuestionType
+  text: string
+  points: number
+  options: QuizOption[]
+  matchChoices: string[]
+}
+
+export type Quiz = Omit<QuizSummary, 'questionCount'> & { questions: QuizQuestion[] }
+
+export const fetchQuizzes = () => getAuthed<QuizSummary[]>('/api/quizzes')
+export const fetchQuiz = (id: number) => getAuthed<Quiz>(`/api/quizzes/${id}`)
+
+// ---------- Проверка ответов и очки (FR-5.2) ----------
+
+export type AttemptAnswer = { questionId: number; optionIds: number[]; pairs: Record<number, string>; hintUsed: boolean }
+export type PointLine = { code: string; label: string; points: number }
+export type QuestionResult = {
+  questionId: number | null
+  text: string
+  type: QuizQuestion['type']
+  correct: boolean
+  correctItems: number
+  totalItems: number
+  hintUsed: boolean
+  pointsEarned: number
+  maxPoints: number
+  userAnswer: string | null
+  correctAnswer: string | null
+  explanation: string | null
+}
+export type AttemptResult = {
+  attemptId: number
+  quizId: number
+  quizTitle: string
+  topic: QuizTopic
+  score: number
+  correctCount: number
+  questionCount: number
+  hintsUsed: number
+  bestStreak: number
+  repeatAttempt: boolean
+  pointsEarned: number
+  totalPoints: number
+  points: PointLine[]
+  questions: QuestionResult[]
+  completedAt: string
+}
+export type QuizHint = { available: boolean; text: string; hiddenOptionIds: number[]; revealedPairs: { optionId: number; match: string }[] }
+
+export const submitAttempt = (quizId: number, answers: AttemptAnswer[]) =>
+  send<AttemptResult>('POST', `/api/quizzes/${quizId}/attempts`, { answers })
+export const fetchHint = (quizId: number, questionId: number) =>
+  getAuthed<QuizHint>(`/api/quizzes/${quizId}/questions/${questionId}/hint`)
+
+// ---------- История прохождений и прогресс (FR-5.4) ----------
+
+export type HistoryItem = {
+  attemptId: number
+  quizId: number
+  quizTitle: string
+  topic: QuizTopic
+  score: number
+  correctCount: number
+  questionCount: number
+  pointsEarned: number
+  repeatAttempt: boolean
+  completedAt: string
+}
+export type QuizProgress = {
+  quizId: number
+  title: string
+  topic: QuizTopic
+  difficulty: QuizDifficulty
+  attempts: number
+  bestScore: number | null
+  lastScore: number | null
+  lastCompletedAt: string | null
+  pointsEarned: number
+}
+export type Progress = {
+  totalPoints: number
+  quizzesTotal: number
+  quizzesCompleted: number
+  attemptsCount: number
+  averageBestScore: number
+  correctAnswers: number
+  answeredQuestions: number
+  bestStreak: number
+  topics: { topic: QuizTopic; quizzesTotal: number; quizzesCompleted: number; averageBestScore: number }[]
+  quizzes: QuizProgress[]
+}
+
+export const fetchHistory = (quizId?: number) =>
+  getAuthed<HistoryItem[]>(quizId ? `/api/quizzes/history?quizId=${quizId}` : '/api/quizzes/history')
+export const fetchAttempt = (attemptId: number) => getAuthed<AttemptResult>(`/api/quizzes/history/${attemptId}`)
+export const fetchProgress = () => getAuthed<Progress>('/api/quizzes/progress')
+
+export type FavoriteType = 'RITE' | 'HERO' | 'WORK'
+export type Favorite = { itemType: FavoriteType; itemId: number; title: string; subtitle: string }
+
+export const fetchFavoriteStatus = (type: FavoriteType, id: number) =>
+  getAuthed<{ favorite: boolean }>(`/api/favorites/status?itemType=${type}&itemId=${id}`)
+export const addFavorite = (type: FavoriteType, id: number) =>
+  send<void>('POST', '/api/favorites', { itemType: type, itemId: id })
+export const removeFavorite = (type: FavoriteType, id: number) =>
+  send<void>('DELETE', `/api/favorites?itemType=${type}&itemId=${id}`)
+
+export type CabinetHistoryItem = { attemptId: number; quizId: number; quizTitle: string; scorePercent: number; pointsEarned: number; repeatAttempt: boolean; completedAt: string }
+export type CabinetAward = { title: string; description: string; awardedAt: string }
+
+export type Cabinet = {
+  profile: { displayName: string; email: string; role: string; registeredAt: string; totalPoints: number }
+  history: CabinetHistoryItem[]
+  awards: CabinetAward[]
+  favorites: Favorite[]
+}
+
+export const fetchCabinet = () => getAuthed<Cabinet>('/api/cabinet')
+// ---------- Редактор: фольклор (FR-7.1) ----------
+
+export type EditorImage = { url: string; caption: string }
+
+export type EditorFolkloreRow = {
+  kind: FolkloreKind
+  id: number
+  title: string
+  typeId: number
+  type: string
+  linkCount: number
+  imageUrl: string | null
+  status: RiteStatus
+}
+
+export type FolkloreHeroForm = {
+  id?: number | null
+  name: string
+  typeId: number | null
+  description: string
+  status?: RiteStatus
+  workIds: number[]
+  images: EditorImage[]
+}
+
+export type FolkloreWorkForm = {
+  id?: number | null
+  title: string
+  typeId: number | null
+  summary: string
+  status?: RiteStatus
+  heroIds: number[]
+  images: EditorImage[]
+}
+
+export const editorFolklore = () => getAuthed<EditorFolkloreRow[]>('/api/editor/folklore')
+export const editorFolkloreTypes = () => getAuthed<FolkloreType[]>('/api/editor/folklore/types')
+export const editorHero = (id: number) => getAuthed<FolkloreHeroForm>(`/api/editor/folklore/heroes/${id}`)
+export const createHero = (form: FolkloreHeroForm) => send<FolkloreHeroForm>('POST', '/api/editor/folklore/heroes', form)
+export const updateHero = (id: number, form: FolkloreHeroForm) => send<FolkloreHeroForm>('PUT', `/api/editor/folklore/heroes/${id}`, form)
+export const deleteHero = (id: number) => send<void>('DELETE', `/api/editor/folklore/heroes/${id}`)
+export const editorWork = (id: number) => getAuthed<FolkloreWorkForm>(`/api/editor/folklore/works/${id}`)
+export const createWork = (form: FolkloreWorkForm) => send<FolkloreWorkForm>('POST', '/api/editor/folklore/works', form)
+export const updateWork = (id: number, form: FolkloreWorkForm) => send<FolkloreWorkForm>('PUT', `/api/editor/folklore/works/${id}`, form)
+export const deleteWork = (id: number) => send<void>('DELETE', `/api/editor/folklore/works/${id}`)
+export const setFolkloreStatus = (kind: FolkloreKind, id: number, status: RiteStatus) =>
+  send<EditorFolkloreRow>('PATCH', `/api/editor/folklore/${kind === 'hero' ? 'heroes' : 'works'}/${id}/status`, { status })
+
+// ---------- Администратор: пользователи и роли (FR-7.3) ----------
+
+export type Role = 'USER' | 'EDITOR' | 'ADMIN'
+export const isAdmin = (user: User | null) => user?.role === 'ADMIN'
+
+export type AdminUserRow = {
+  id: number
+  email: string
+  displayName: string
+  role: Role
+  blocked: boolean
+  totalPoints: number
+  registeredAt: string
+  me: boolean
+}
+export type AdminRole = { name: Role; title: string; description: string; userCount: number }
+
+export const adminUsers = () => getAuthed<AdminUserRow[]>('/api/admin/users')
+export const adminRoles = () => getAuthed<AdminRole[]>('/api/admin/roles')
+export const setUserRole = (id: number, role: Role) => send<AdminUserRow>('PATCH', `/api/admin/users/${id}/role`, { role })
+export const setUserBlocked = (id: number, blocked: boolean) => send<AdminUserRow>('PATCH', `/api/admin/users/${id}/blocked`, { blocked })
+
+// ---------- Языки и переводы (FR-8.1) ----------
+
+export type AdminLanguage = { code: string; name: string; nativeName: string; enabled: boolean; defaultLanguage: boolean; translationCount: number }
+export const adminLanguages = () => getAuthed<AdminLanguage[]>('/api/admin/languages')
+export const toggleLanguage = (code: string, enabled: boolean) => send<AdminLanguage>('PATCH', `/api/admin/languages/${code}`, { enabled })
+
+export type TranslationKind = { type: string; title: string }
+export type TranslationMeta = { kinds: TranslationKind[]; languages: AdminLanguage[] }
+export type TranslationItem = { id: number; title: string; filled: number; total: number }
+export type TranslationField = { field: string; label: string; original: string; translation: string | null; multiline: boolean }
+export type TranslationForm = { type: string; id: number; title: string; language: string; fields: TranslationField[] }
+
+export const translationMeta = () => getAuthed<TranslationMeta>('/api/editor/translations')
+export const translationItems = (type: string, lang: string) =>
+  getAuthed<TranslationItem[]>(`/api/editor/translations/${type}?lang=${encodeURIComponent(lang)}`)
+export const translationForm = (type: string, id: number, lang: string) =>
+  getAuthed<TranslationForm>(`/api/editor/translations/${type}/${id}?lang=${encodeURIComponent(lang)}`)
+export const saveTranslation = (type: string, id: number, lang: string, fields: Record<string, string>) =>
+  send<TranslationForm>('PUT', `/api/editor/translations/${type}/${id}?lang=${encodeURIComponent(lang)}`, { fields })
 
 // ---------- Поиск (FR-4.1) ----------
 

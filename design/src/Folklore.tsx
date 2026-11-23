@@ -1,3 +1,5 @@
+import { FavoriteButton } from './Favorite'
+import type { User } from './api'
 import { useEffect, useState } from 'react'
 import { fetchFolkloreDetail, fetchFolkloreItems, fetchFolkloreTypes } from './api'
 import type { FolkloreDetail as Detail, FolkloreItem, FolkloreKind, FolkloreType } from './api'
@@ -58,10 +60,11 @@ export function Folklore({ openItem }: { openItem: (ref: FolkloreRef) => void })
 }
 
 /** Карточка героя или произведения (FR-3.2): имя, тип, описание, связанные карточки, иллюстрации. */
-export function FolkloreDetail({ go, item, openItem }: {
+export function FolkloreDetail({ go, item, openItem, user }: {
   go: (p: 'folklore') => void
   item: FolkloreRef | null
   openItem: (ref: FolkloreRef) => void
+  user: User | null
 }) {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [status, setStatus] = useState<Status>('loading')
@@ -91,6 +94,7 @@ export function FolkloreDetail({ go, item, openItem }: {
   const cover = detail.images[0]?.url
 
   return <main className="trad-detail">{back}
+    <FavoriteButton user={user} itemType={detail.kind === 'hero' ? 'HERO' : 'WORK'} itemId={detail.id} />
     <div className="trad-hero" style={{ backgroundImage: cover ? `linear-gradient(0deg,rgba(30,18,15,.7),transparent),url(${cover})` : noImage }}>
       <div><p>{detail.type.toUpperCase()}</p><h1>{detail.title}</h1><span>{kindLabel(detail.kind)}</span></div>
     </div>

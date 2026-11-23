@@ -1,5 +1,6 @@
 package kg.murasinteractive.folklore.model;
 
+import kg.murasinteractive.content.ContentStatus;
 import jakarta.persistence.*;
 import kg.murasinteractive.media.model.MediaFile;
 
@@ -18,6 +19,10 @@ public class FolkloreHero {
 
     @Column(name = "name", nullable = false, length = 200)
     private String name;
+
+    /** Статус материала (FR-7.2): DRAFT, PUBLISHED, HIDDEN. Существующие записи получают PUBLISHED. */
+    @Column(name = "status", nullable = false, length = 20, columnDefinition = "varchar(20) default 'PUBLISHED'")
+    private String status = ContentStatus.PUBLISHED;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "hero_type_id", nullable = false)
@@ -54,4 +59,8 @@ public class FolkloreHero {
     public void setDescription(String description) { this.description = description; }
     public List<FolkloreWork> getWorks() { return works; }
     public List<MediaFile> getMedia() { return media; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public boolean isPublished() { return ContentStatus.PUBLISHED.equals(status); }
 }
