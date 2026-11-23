@@ -3,6 +3,8 @@ package kg.murasinteractive.editor.service;
 import kg.murasinteractive.editor.dto.CategoryRow;
 import kg.murasinteractive.editor.dto.RiteForm;
 import kg.murasinteractive.editor.dto.RiteRow;
+import kg.murasinteractive.i18n.repository.ContentTranslationRepository;
+import kg.murasinteractive.i18n.service.Translatable;
 import kg.murasinteractive.media.model.MediaFile;
 import kg.murasinteractive.media.repository.MediaFileRepository;
 import kg.murasinteractive.rite.model.Rite;
@@ -29,12 +31,14 @@ public class ContentEditorService {
     private final RiteRepository riteRepository;
     private final RiteCategoryRepository categoryRepository;
     private final MediaFileRepository mediaFileRepository;
+    private final ContentTranslationRepository translationRepository;
 
     public ContentEditorService(RiteRepository riteRepository, RiteCategoryRepository categoryRepository,
-                                MediaFileRepository mediaFileRepository) {
+                                MediaFileRepository mediaFileRepository, ContentTranslationRepository translationRepository) {
         this.riteRepository = riteRepository;
         this.categoryRepository = categoryRepository;
         this.mediaFileRepository = mediaFileRepository;
+        this.translationRepository = translationRepository;
     }
 
     // ---------- Обряды ----------
@@ -86,6 +90,7 @@ public class ContentEditorService {
     @Transactional
     public void deleteRite(Long riteId) {
         riteRepository.delete(findRite(riteId));
+        translationRepository.deleteByEntityTypeAndEntityId(Translatable.RITE, riteId); // переводы (FR-8.1)
     }
 
     private Rite findRite(Long riteId) {
@@ -173,6 +178,7 @@ public class ContentEditorService {
                     "В категории есть обряды. Сначала перенесите или удалите их.");
         }
         categoryRepository.delete(category);
+        translationRepository.deleteByEntityTypeAndEntityId(Translatable.RITE_CATEGORY, categoryId);
     }
 
     private RiteCategory findCategory(Long categoryId) {
