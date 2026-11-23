@@ -90,8 +90,8 @@ public class SearchService {
               select distinct w from (
                 select %1$s as w from rite r where r.status = 'PUBLISHED'
                 union all select %2$s from rite_step s join rite r on r.rite_id = s.rite_id where r.status = 'PUBLISHED'
-                union all select %3$s from folklore_hero h
-                union all select %4$s from folklore_work fw
+                union all select %3$s from folklore_hero h where h.status = 'PUBLISHED'
+                union all select %4$s from folklore_work fw where fw.status = 'PUBLISHED'
                 union all select %5$s from yurt_element y
               ) t where length(w) >= 3
             )
