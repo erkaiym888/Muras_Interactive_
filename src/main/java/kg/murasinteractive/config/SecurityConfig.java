@@ -20,6 +20,8 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
  * Безопасность (NFR-6): пароли хранятся как BCrypt-хэш, вход по сессии (cookie),
  * все изменяющие запросы защищены CSRF-токеном. Каталог открыт и для гостей (п. 4.1 ТЗ);
  * закрытые разделы (викторины, кабинет) добавятся по мере появления.
+ * Викторины, личный кабинет и избранное (/api/quizzes, /api/cabinet, /api/favorites) - только после входа,
+ * гость получает 401.
  * Управление содержимым /api/editor/** - только для ролей EDITOR и ADMIN (FR-7.1):
  * гость получает 401, обычный пользователь - 403.
  * Пользователи и роли /api/admin/** - только ADMIN (FR-7.3); блокировка и смена роли действуют сразу (AccountStatusFilter).
@@ -39,6 +41,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/editor/**").hasAnyRole(UserRole.EDITOR, UserRole.ADMIN)
+                        .requestMatchers("/api/quizzes/**", "/api/cabinet/**", "/api/favorites/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole(UserRole.ADMIN)
                         .anyRequest().permitAll())
                 .formLogin(form -> form

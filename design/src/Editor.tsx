@@ -5,6 +5,7 @@ import {
   editorRite, editorRites, renameCategory, setRiteStatus, updateRite,
 } from './api'
 import type { EditorCategory, EditorRiteRow, RiteForm, RiteStatus, User } from './api'
+import { RelationsField } from './EditorRelations'
 import { Field, ImagesField, STATUS, STATUSES, StatusOptions, StatusSelect, errorText, imageErrors } from './EditorFields'
 import { FolkloreEditor } from './FolkloreEditor'
 import { Translations } from './Translations'
@@ -18,7 +19,7 @@ import type { FolkloreRef } from './Folklore'
 
 const emptyForm = (): RiteForm => ({
   title: '', categoryId: null, status: 'DRAFT', summary: '', description: '', symbolism: '', sources: '',
-  steps: [{ title: '', text: '' }], images: [],
+  steps: [{ title: '', text: '' }], images: [], yurtElementKeys: [], heroIds: [], workIds: [],
 })
 
 /** Сервер присылает null в пустых полях - в форме нужны строки. */
@@ -27,6 +28,7 @@ const normalize = (f: RiteForm): RiteForm => ({
   summary: f.summary ?? '', description: f.description ?? '', symbolism: f.symbolism ?? '', sources: f.sources ?? '',
   steps: (f.steps ?? []).map(s => ({ title: s.title ?? '', text: s.text ?? '' })),
   images: (f.images ?? []).map(i => ({ url: i.url ?? '', caption: i.caption ?? '' })),
+  yurtElementKeys: f.yurtElementKeys ?? [], heroIds: f.heroIds ?? [], workIds: f.workIds ?? [],
 })
 
 type View = { tab: 'rites' } | { tab: 'form'; id: number | null } | { tab: 'folklore' } | { tab: 'categories' } | { tab: 'translations' }
@@ -241,6 +243,9 @@ function RiteEditor({ id, onCancel, onSaved }: { id: number | null; onCancel: ()
           </div>)}
           <button type="button" className="add" onClick={() => set('steps', [...form.steps, { title: '', text: '' }])}>+ Добавить этап</button>
         </fieldset>
+
+        <RelationsField yurtElementKeys={form.yurtElementKeys} heroIds={form.heroIds} workIds={form.workIds}
+          onChange={next => setForm({ ...form, ...next })} />
       </div>
 
       <aside className="form-side">

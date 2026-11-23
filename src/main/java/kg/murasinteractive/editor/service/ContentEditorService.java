@@ -2,7 +2,14 @@ package kg.murasinteractive.editor.service;
 
 import kg.murasinteractive.editor.dto.CategoryRow;
 import kg.murasinteractive.editor.dto.RiteForm;
+import kg.murasinteractive.editor.dto.RelationOptions;
 import kg.murasinteractive.editor.dto.RiteRow;
+import kg.murasinteractive.folklore.model.FolkloreHero;
+import kg.murasinteractive.folklore.model.FolkloreWork;
+import kg.murasinteractive.folklore.repository.FolkloreHeroRepository;
+import kg.murasinteractive.folklore.repository.FolkloreWorkRepository;
+import kg.murasinteractive.yurt.model.YurtElement;
+import kg.murasinteractive.yurt.repository.YurtElementRepository;
 import kg.murasinteractive.i18n.repository.ContentTranslationRepository;
 import kg.murasinteractive.i18n.service.Translatable;
 import kg.murasinteractive.media.model.MediaFile;
@@ -31,14 +38,34 @@ public class ContentEditorService {
     private final RiteRepository riteRepository;
     private final RiteCategoryRepository categoryRepository;
     private final MediaFileRepository mediaFileRepository;
+    private final YurtElementRepository yurtRepository;
+    private final FolkloreHeroRepository heroRepository;
+    private final FolkloreWorkRepository workRepository;
     private final ContentTranslationRepository translationRepository;
 
     public ContentEditorService(RiteRepository riteRepository, RiteCategoryRepository categoryRepository,
-                                MediaFileRepository mediaFileRepository, ContentTranslationRepository translationRepository) {
+                                MediaFileRepository mediaFileRepository, YurtElementRepository yurtRepository,
+                                FolkloreHeroRepository heroRepository, FolkloreWorkRepository workRepository,
+                                ContentTranslationRepository translationRepository) {
         this.riteRepository = riteRepository;
         this.categoryRepository = categoryRepository;
         this.mediaFileRepository = mediaFileRepository;
+        this.yurtRepository = yurtRepository;
+        this.heroRepository = heroRepository;
+        this.workRepository = workRepository;
         this.translationRepository = translationRepository;
+    }
+
+    /** Что можно связать с обрядом (FR-3.3). */
+    @Transactional(readOnly = true)
+    public RelationOptions relationOptions() {
+        return new RelationOptions(
+                yurtRepository.findAllByOrderBySortOrderAsc().stream()
+                        .map(y -> new RelationOptions.Option(null, y.getElementKey(), y.getName(), y.getGroup())).toList(),
+                heroRepository.findAllByOrderByHeroIdAsc().stream()
+                        .map(h -> new RelationOptions.Option(h.getHeroId(), null, h.getName(), h.getHeroType().getTypeName())).toList(),
+                workRepository.findAllByOrderByWorkIdAsc().stream()
+                        .map(w -> new RelationOptions.Option(w.getWorkId(), null, w.getTitle(), w.getWorkType().getTypeName())).toList());
     }
 
     // ---------- Обряды ----------
@@ -129,6 +156,20 @@ public class ContentEditorService {
             media.setCaption(blankToNull(image.caption()));
             rite.getMedia().add(mediaFileRepository.save(media));
         }
+
+        // Связи (FR-3.3): несуществующие ключи и id просто пропускаем
+        if (form.yurtElementKeys() != null) {
+            rite.getYurtElements().clear();
+            rite.getYurtElements().addAll(yurtRepository.findByElementKeyIn(form.yurtElementKeys()));
+        }
+        if (form.heroIds() != null) {
+            rite.getHeroes().clear();
+            rite.getHeroes().addAll(heroRepository.findAllById(form.heroIds()));
+        }
+        if (form.workIds() != null) {
+            rite.getWorks().clear();
+            rite.getWorks().addAll(workRepository.findAllById(form.workIds()));
+        }
     }
 
     private RiteForm toForm(Rite r) {
@@ -139,7 +180,10 @@ public class ContentEditorService {
                 .map(m -> new RiteForm.Image(m.getFilePath(), m.getCaption()))
                 .toList();
         return new RiteForm(r.getRiteId(), r.getTitle(), r.getRiteCategory().getRiteCategoryId(), r.getStatus(),
-                r.getSummary(), r.getDescription(), r.getSymbolism(), r.getSources(), steps, images);
+                r.getSummary(), r.getDescription(), r.getSymbolism(), r.getSources(), steps, images,
+                r.getYurtElements().stream().map(YurtElement::getElementKey).toList(),
+                r.getHeroes().stream().map(FolkloreHero::getHeroId).toList(),
+                r.getWorks().stream().map(FolkloreWork::getWorkId).toList());
     }
 
     // ---------- Категории ----------
