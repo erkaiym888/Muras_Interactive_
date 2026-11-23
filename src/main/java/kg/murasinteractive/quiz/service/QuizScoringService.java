@@ -1,5 +1,8 @@
 package kg.murasinteractive.quiz.service;
 
+import kg.murasinteractive.awards.dto.RewardEventDto;
+import kg.murasinteractive.awards.service.AwardService;
+import kg.murasinteractive.awards.service.LevelService;
 import kg.murasinteractive.points.service.PointRules;
 import kg.murasinteractive.points.service.PointService;
 import kg.murasinteractive.quiz.dto.AttemptRequest;
@@ -8,6 +11,7 @@ import kg.murasinteractive.quiz.dto.HintDto;
 import kg.murasinteractive.quiz.dto.PointLineDto;
 import kg.murasinteractive.quiz.dto.QuestionResultDto;
 import kg.murasinteractive.quiz.model.AnswerOption;
+import kg.murasinteractive.quiz.model.Difficulty;
 import kg.murasinteractive.quiz.model.QuestionType;
 import kg.murasinteractive.quiz.model.Quiz;
 import kg.murasinteractive.quiz.model.QuizAttempt;
@@ -59,14 +63,28 @@ public class QuizScoringService {
     private final UserAccountRepository userRepository;
     private final PointRules rules;
     private final PointService pointService;
+    private final AwardService awardService;
+    private final LevelService levelService;
 
     public QuizScoringService(QuizRepository quizRepository, QuizAttemptRepository attemptRepository,
-                              UserAccountRepository userRepository, PointRules rules, PointService pointService) {
+                              UserAccountRepository userRepository, PointRules rules, PointService pointService,
+                              AwardService awardService, LevelService levelService) {
         this.quizRepository = quizRepository;
         this.attemptRepository = attemptRepository;
         this.userRepository = userRepository;
         this.rules = rules;
         this.pointService = pointService;
+        this.awardService = awardService;
+        this.levelService = levelService;
+    }
+
+    /** Викторины повышенной сложности открываются с уровня «Акын» (Приложение Б.2). */
+    public void checkAccess(Quiz quiz, int userPoints) {
+        if (quiz.getDifficulty() == Difficulty.HARD
+                && levelService.levelFor(userPoints).number() < LevelService.HARD_QUIZ_LEVEL) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Викторины повышенной сложности открываются на уровне «Акын» (800 очков)");
+        }
     }
 
     /** Проверяет ответы, сохраняет прохождение и начисляет очки. */
@@ -75,6 +93,8 @@ public class QuizScoringService {
         UserAccount user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         Quiz quiz = findQuiz(quizId);
+        checkAccess(quiz, user.getTotalPoints());
+        int pointsBefore = user.getTotalPoints();
         if (quiz.getQuestions().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "В викторине нет вопросов");
         }
@@ -181,7 +201,13 @@ public class QuizScoringService {
         }
         attempt.setPointsEarned(total);
 
-        return toResult(attempt, lines, user.getTotalPoints());
+        // FR-5.3: значки за викторины и переход на новый уровень (бонусы значков - отдельными строками)
+        RewardEventDto rewards = awardService.afterQuiz(user, attempt, pointsBefore);
+        AttemptResultDto base = toResult(attempt, lines, user.getTotalPoints());
+        return new AttemptResultDto(base.attemptId(), base.quizId(), base.quizTitle(), base.topic(), base.score(),
+                base.correctCount(), base.questionCount(), base.hintsUsed(), base.bestStreak(), base.repeatAttempt(),
+                base.pointsEarned(), user.getTotalPoints(), base.points(), base.questions(), base.completedAt(),
+                rewards.newAchievements(), rewards.levelUp());
     }
 
     /** Подсказка: убирает часть неверных вариантов или показывает одну верную пару. */
@@ -288,6 +314,6 @@ public class QuizScoringService {
         return new AttemptResultDto(attempt.getAttemptId(), quiz.getQuizId(), quiz.getTitle(), quiz.getTopic().name(),
                 attempt.getScore(), attempt.getCorrectCount(), attempt.getQuestionCount(), attempt.getHintsUsed(),
                 attempt.getBestStreak(), attempt.isRepeatAttempt(), attempt.getPointsEarned(), totalPoints,
-                lines, questions, attempt.getCompletedAt());
+                lines, questions, attempt.getCompletedAt(), List.of(), null);
     }
 }

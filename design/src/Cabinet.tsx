@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import './features.css'
-import { canEditContent, fetchCabinet, fetchProgress, removeFavorite } from './api'
-import type { Cabinet as CabinetData, Favorite, Progress, User } from './api'
+import { canEditContent, fetchAwards, fetchCabinet, fetchProgress, removeFavorite } from './api'
+import type { Awards, Cabinet as CabinetData, Favorite, Progress, User } from './api'
+import { AwardsPanel, LevelAvatar, LevelCard } from './Rewards'
 import { AttemptDetail, ProgressPanel, formatDateTime } from './QuizHistory'
 import type { FolkloreRef } from './Folklore'
 
@@ -21,6 +22,7 @@ export function Cabinet({ user, go, openRite, openItem }: {
   const [data, setData] = useState<CabinetData | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [progress, setProgress] = useState<Progress | null>(null)
+  const [awards, setAwards] = useState<Awards | null>(null)
   const [openAttempt, setOpenAttempt] = useState<number | null>(null)
   const userId = user?.id
 
@@ -32,6 +34,7 @@ export function Cabinet({ user, go, openRite, openItem }: {
       .then(d => { if (alive) { setData(d); setStatus('ready') } })
       .catch(() => { if (alive) setStatus('error') })
     fetchProgress().then(p => { if (alive) setProgress(p) }).catch(() => {})
+    fetchAwards().then(a => { if (alive) setAwards(a) }).catch(() => {})
     return () => { alive = false }
   }, [userId])
 
@@ -61,12 +64,13 @@ export function Cabinet({ user, go, openRite, openItem }: {
   return <main className="catalog">{title}
     <div className="cab-grid">
       <aside className="cab-card cab-profile">
-        <div className="avatar-lg" aria-hidden="true">{profile.displayName.trim().charAt(0).toUpperCase()}</div>
+        <LevelAvatar name={profile.displayName} level={awards?.level.number ?? 1} />
         <h2>{profile.displayName}</h2>
         <p>{profile.email}</p>
         <span className="cab-role">{ROLE[profile.role] ?? profile.role}</span>
         <div className="cab-points"><b>{profile.totalPoints}</b><span>очков</span></div>
         <p className="cab-since">С нами с {formatDate(profile.registeredAt)}</p>
+        {awards && <LevelCard awards={awards} />}
       </aside>
       <div>
         {canEditContent(user) && <section className="cab-card">
@@ -76,7 +80,8 @@ export function Cabinet({ user, go, openRite, openItem }: {
         </section>}
         <section className="cab-card">
           <h2>Награды</h2>
-          {data.awards.length === 0 ? <p className="cab-empty">Наград пока нет. Они появятся за прохождение викторин и изучение материалов.</p>
+          {awards ? <AwardsPanel awards={awards} />
+            : data.awards.length === 0 ? <p className="cab-empty">Наград пока нет. Они появятся за прохождение викторин и изучение материалов.</p>
             : <ul className="cab-list">{data.awards.map(a => <li key={a.title}><span><b>{a.title}</b><small>{a.description}</small></span><small>{formatDate(a.awardedAt)}</small></li>)}</ul>}
         </section>
         {progress && progress.attemptsCount > 0 && <section className="cab-card">

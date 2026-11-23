@@ -4,7 +4,8 @@ import { Traditions, TraditionDetail } from './Traditions'
 import { Auth } from './Auth'
 import { Folklore, FolkloreDetail } from './Folklore'
 import type { FolkloreRef } from './Folklore'
-import { canEditContent, fetchMe, logout } from './api'
+import { canEditContent, fetchMe, logout, postVisit } from './api'
+import { RewardToasts, emitReward, trackView } from './Rewards'
 import { Editor } from './Editor'
 import { Quizzes } from './Quizzes'
 import { Cabinet } from './Cabinet'
@@ -121,11 +122,14 @@ function Lens({ k, className = 'lens' }: { k: PartKey; className?: string }) {
   </div>
 }
 
-function Yurt({ go, selected, setSelected }: { go: (p: Page) => void; selected: PartKey; setSelected: (k: PartKey) => void }) {
+function Yurt({ go, selected, setSelected, user }: { go: (p: Page) => void; selected: PartKey; setSelected: (k: PartKey) => void; user: User | null }) {
   const [panelOpen, setPanelOpen] = useState(true)
   const part = yurtParts[selected]
   const idx = partKeys.indexOf(selected)
-  const pick = (k: PartKey) => { setSelected(k); setPanelOpen(true) }
+  // FR-5.3: +2 за первое открытие элемента, значок «Хозяин юрты»
+  const pick = (k: PartKey) => { setSelected(k); setPanelOpen(true); trackView(user, 'YURT_PART', k) }
+  // элемент, открытый при входе на страницу, тоже считается открытым
+  useEffect(() => { trackView(user, 'YURT_PART', selected) }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
   const step = (d: number) => pick(partKeys[(idx + d + partKeys.length) % partKeys.length])
   const byName = (name: string) => partKeys.find(k => yurtParts[k].name === name)
   return <main className="museum-page"><div className="page-title"><p className="kicker">ИНТЕРАКТИВНАЯ ЭКСПОЗИЦИЯ · 01</p><h1>Внутри кыргызской <i>юрты</i></h1><p>Нажмите на точку на схеме, чтобы узнать устройство, назначение и смысл каждого элемента боз үй.</p></div>
@@ -157,12 +161,15 @@ export default function App() {
   const [resetToken]=useState(()=>new URLSearchParams(window.location.search).get('reset')??'')
   const [user,setUser]=useState<User|null>(null)
   useEffect(()=>{fetchMe().then(setUser).catch(()=>setUser(null))},[])
+  // FR-5.3: ежедневный вход (+5 раз в сутки), «Первый шаг», серии входов
+  const userId=user?.id
+  useEffect(()=>{if(userId!==undefined)postVisit().then(emitReward).catch(()=>{})},[userId])
   const doLogout=async()=>{try{await logout()}catch{/* всё равно считаем вышедшей */}finally{setUser(null);go('register')}}
   const [part,setPart]=useState<PartKey>('tunduk')
   const [riteId,setRiteId]=useState<number|null>(null)
   const [folkloreRef,setFolkloreRef]=useState<FolkloreRef|null>(null)
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
-  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId} user={user}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef} user={user}/>:page==='quizzes'?<Quizzes user={user} go={go}/>:page==='cabinet'?<Cabinet user={user} go={go} openRite={id=>{setRiteId(id);go('tradition-detail')}} openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
+  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart} user={user}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId} user={user}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef} user={user}/>:page==='quizzes'?<Quizzes user={user} go={go}/>:page==='cabinet'?<Cabinet user={user} go={go} openRite={id=>{setRiteId(id);go('tradition-detail')}} openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
   const auth=['login','register','recover','reset'].includes(page)
-  return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} {content} {!auth&&<Footer go={go}/>}</div>
+  return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} {content} {!auth&&<Footer go={go}/>}<RewardToasts/></div>
 }
