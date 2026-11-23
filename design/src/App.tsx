@@ -7,11 +7,12 @@ import type { FolkloreRef } from './Folklore'
 import { canEditContent, fetchMe, logout } from './api'
 import { Editor } from './Editor'
 import { Quizzes } from './Quizzes'
+import { Cabinet } from './Cabinet'
 import type { User } from './api'
 import AuthenticYurtDiagram from './AuthenticYurtDiagram'
 import { PartKey, partKeys, YURT_IMAGE, yurtParts, yurtSize } from './yurt'
 
-type Page = 'home' | 'yurt' | 'yurt-detail' | 'traditions' | 'tradition-detail' | 'folklore' | 'folklore-detail' | 'editor' | 'quizzes' | 'login' | 'register' | 'recover' | 'reset'
+type Page = 'home' | 'yurt' | 'yurt-detail' | 'traditions' | 'tradition-detail' | 'folklore' | 'folklore-detail' | 'editor' | 'quizzes' | 'cabinet' | 'login' | 'register' | 'recover' | 'reset'
 
 const Arrow = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 6l6 6-6 6"/></svg>
 const Eye = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
@@ -74,7 +75,8 @@ function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => voi
       <div className="drawer-account">
         {user ? <>
           <p className="who"><span className="avatar" aria-hidden="true">{user.displayName.trim().charAt(0).toUpperCase()}</span><span><b>{user.displayName}</b><small>{ROLE_LABEL[user.role] ?? user.role}</small></span></p>
-          <button className="drawer-btn" onClick={() => { setOpen(false); onLogout() }}>Выйти из аккаунта <Arrow/></button>
+          <button className="drawer-btn" onClick={() => to('cabinet')}>Личный кабинет <Arrow/></button>
+          <button className="drawer-btn ghost" onClick={() => { setOpen(false); onLogout() }}>Выйти из аккаунта</button>
         </> : <>
           <p className="drawer-hint">Войдите, чтобы сохранять материалы и проходить викторины.</p>
           <div className="drawer-auth"><button className="drawer-btn" onClick={() => to('login')}>Войти <Arrow/></button><button className="drawer-btn ghost" onClick={() => to('register')}>Регистрация</button></div>
@@ -160,7 +162,7 @@ export default function App() {
   const [riteId,setRiteId]=useState<number|null>(null)
   const [folkloreRef,setFolkloreRef]=useState<FolkloreRef|null>(null)
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
-  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef}/>:page==='quizzes'?<Quizzes user={user} go={go}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
+  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId} user={user}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef} user={user}/>:page==='quizzes'?<Quizzes user={user} go={go}/>:page==='cabinet'?<Cabinet user={user} go={go} openRite={id=>{setRiteId(id);go('tradition-detail')}} openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
   const auth=['login','register','recover','reset'].includes(page)
   return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} {content} {!auth&&<Footer go={go}/>}</div>
 }

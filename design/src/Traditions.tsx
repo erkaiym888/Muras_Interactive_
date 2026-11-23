@@ -1,3 +1,5 @@
+import { FavoriteButton } from './Favorite'
+import type { User } from './api'
 import { useEffect, useState } from 'react'
 import { photos } from './data'
 import { fetchCategories, fetchRite, fetchRites } from './api'
@@ -77,7 +79,7 @@ export function Traditions({ openRite }: { openRite: (id: number) => void }) {
 }
 
 /** Карточка обряда (FR-2.2): название, категория, описание, этапы, символика, изображения, источники. */
-export function TraditionDetail({ go, riteId }: { go: Go; riteId: number | null }) {
+export function TraditionDetail({ go, riteId, user }: { go: Go; riteId: number | null; user: User | null }) {
   const [rite, setRite] = useState<RiteDetail | null>(null)
   const [status, setStatus] = useState<Status>('loading')
 
@@ -103,6 +105,7 @@ export function TraditionDetail({ go, riteId }: { go: Go; riteId: number | null 
   const image = rite.images[0]?.url ?? photos.hero
 
   return <main className="trad-detail">{back}
+    <FavoriteButton user={user} itemType="RITE" itemId={rite.id} />
     <div className="trad-hero" style={{ backgroundImage: `linear-gradient(0deg,rgba(30,18,15,.7),transparent),url(${image})` }}>
       <div><p>{rite.category.toUpperCase()}</p><h1>{rite.title}</h1><span>{rite.summary}</span></div>
     </div>
