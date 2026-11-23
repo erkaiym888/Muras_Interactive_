@@ -380,3 +380,11 @@ export const fetchAwards = () => getAuthed<Awards>('/api/awards')
 export const postVisit = () => send<RewardEvent>('POST', '/api/activity/visit')
 export const postView = (type: ViewType, key: string | number) =>
   send<RewardEvent>('POST', '/api/activity/view', { type, key: String(key) })
+
+// ---------- Рейтинг (FR-5.5) ----------
+
+export type RatingPeriod = 'all' | 'week'
+export type RatingRow = { place: number; displayName: string; level: number; levelTitle: string; points: number; me: boolean }
+export type Rating = { period: RatingPeriod; weekStart: string | null; weekEnd: string | null; participants: number; rows: RatingRow[]; me: RatingRow | null }
+
+export const fetchRating = (period: RatingPeriod) => getJson<Rating>(`/api/rating?period=${period}`)

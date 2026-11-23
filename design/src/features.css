@@ -223,3 +223,32 @@
 .new-rewards small{color:#7a6a58;font-size:13px}
 .new-rewards em{font-style:normal;color:var(--wine);font-weight:600}
 .quiz-locked{margin:0!important;padding:12px 14px;background:#f1ede8;color:#6f6258!important;font-size:14px!important;text-align:center}
+
+/* ===== FR-5.5: рейтинг ===== */
+.rk-tabs{display:flex;justify-content:center;gap:8px;margin:6px 0 14px}
+.rk-tabs button{border:1px solid #d9cdb8;background:transparent;padding:11px 22px;font:inherit;font-size:14px;color:#5d544d;cursor:pointer}
+.rk-tabs button.active{background:var(--wine);border-color:var(--wine);color:#fff}
+.rk-week{text-align:center;color:#8a7d73;font-size:13px;margin:0 0 10px}
+.rk-podium{list-style:none;margin:34px auto 30px;padding:0;display:flex;justify-content:center;align-items:flex-end;gap:18px;max-width:760px}
+.rk-podium li{flex:1;display:grid;justify-items:center;text-align:center;gap:4px}
+.rk-podium li b{font-size:16px;margin-top:6px}
+.rk-podium li small{color:#8a7d73;font-size:12px}
+.rk-pedestal{display:grid;place-items:center;align-content:center;gap:2px;width:100%;margin-top:10px;background:#efe5d4;color:#5d4a2e;font-weight:600;font-size:14px}
+.rk-pedestal em{font-style:normal;font-family:Prata,serif;font-size:30px;color:var(--wine)}
+.rk-podium .p1 .rk-pedestal{height:130px;background:linear-gradient(180deg,#e8cf9c,#d8b779)}
+.rk-podium .p2 .rk-pedestal{height:100px}
+.rk-podium .p3 .rk-pedestal{height:78px;background:#f1e7d9}
+.rk-podium li.me b{color:var(--wine)}
+.rk-list{list-style:none;margin:0 auto;padding:0;max-width:860px;background:var(--white);border:1px solid #e6dccb}
+.rk-list li{display:grid;grid-template-columns:48px 44px 1fr auto;gap:14px;align-items:center;padding:12px 20px}
+.rk-list li+li{border-top:1px solid #f0e9de}
+.rk-list li.me{background:#f8efdf;box-shadow:inset 3px 0 0 var(--wine)}
+.rk-place{font-family:Prata,serif;font-size:20px;color:var(--wine);text-align:center}
+.rk-name b{display:block;font-weight:600}
+.rk-name em{font-style:normal;color:var(--gold);font-weight:600}
+.rk-name small{color:#8a7d73;font-size:12px}
+.rk-points{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rk-points small{font-weight:400;color:#8a7d73}
+.rk-gap{text-align:center;color:#b0a597;margin:6px 0}
+.rk-total,.rk-join{text-align:center;color:#8a7d73;font-size:13px;margin-top:18px}
+@media(max-width:600px){.rk-podium{gap:8px}.rk-podium li b{font-size:13px}.rk-list li{grid-template-columns:36px 38px 1fr auto;gap:10px;padding:10px 12px}}
