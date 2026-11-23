@@ -287,3 +287,24 @@
 }
 /* Подвал: подпись не прилипает к эмблеме */
 footer>div:first-child>p{margin:18px 0 0;line-height:1.6}
+.rel-pick .hint-text{font-size:12px;color:#8a7d73;margin:0 0 12px}
+.rel-pick-group{margin:0 0 16px}
+.rel-pick-title{display:flex;align-items:center;gap:8px;font:600 10px Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#766a61;margin-bottom:8px}
+.rel-pick-title i{width:8px;height:8px;border-radius:50%;background:var(--k)}
+.rel-chips{display:flex;flex-wrap:wrap;gap:8px}
+.rel-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #ddd2c2;background:#fffdf8;padding:7px 12px;font-size:13px;cursor:pointer;border-radius:2px}
+.rel-chip input{position:absolute;opacity:0;pointer-events:none}
+.rel-chip small{color:#9a8d82;font-size:11px}
+.rel-chip.on{border-color:var(--k);background:color-mix(in srgb,var(--k) 10%,#fff);box-shadow:inset 3px 0 0 var(--k)}
+.rel-chip:focus-within{outline:2px solid var(--wine);outline-offset:2px}
+/* FR-3.3: связи ссылками в тексте */
+.rel-link{color:var(--wine);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--wine) 35%,transparent);text-decoration-thickness:1px;text-underline-offset:3px;transition:text-decoration-color .15s,background .15s}
+.rel-link:hover,.rel-link:focus-visible{text-decoration-color:var(--wine);background:#f3e6d4;outline:none}
+.info-panel .rel-link{color:var(--sand);text-decoration-color:#d9b98a80}
+.info-panel .rel-link:hover,.info-panel .rel-link:focus-visible{background:#ffffff14;text-decoration-color:var(--sand)}
+.big .rel-link{text-underline-offset:5px}
+.see-also{margin:44px 0 0;padding-top:20px;border-top:1px solid #d9cdbd;font-size:15px;line-height:1.8;color:#4c423c}
+.see-also>span:first-child{color:#8a7d73}
+.see-also small{color:#9a8d82;font-size:12px}
+.see-also.compact{margin:6px 0 16px;padding-top:14px;border-top:1px solid #8e5a5e;font-size:12px;color:#e1d2cc}
+.see-also.compact>span:first-child{text-transform:uppercase;letter-spacing:.18em;font-size:9px;color:var(--sand);display:block;margin-bottom:4px}

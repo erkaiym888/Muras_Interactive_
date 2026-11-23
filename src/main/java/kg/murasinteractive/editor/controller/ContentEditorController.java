@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import kg.murasinteractive.editor.dto.CategoryForm;
 import kg.murasinteractive.editor.dto.CategoryRow;
 import kg.murasinteractive.editor.dto.RiteForm;
+import kg.murasinteractive.editor.dto.RelationOptions;
 import kg.murasinteractive.editor.dto.RiteRow;
 import kg.murasinteractive.editor.service.ContentEditorService;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ import java.util.List;
  *  POST   /api/editor/rite-categories       - добавить категорию
  *  PUT    /api/editor/rite-categories/{id}  - переименовать категорию
  *  DELETE /api/editor/rite-categories/{id}  - удалить пустую категорию
+ *  GET    /api/editor/relation-options      - элементы юрты, герои и произведения для связей (FR-3.3)
  */
 @RestController
 @RequestMapping("/api/editor")
@@ -37,6 +39,12 @@ public class ContentEditorController {
     @GetMapping("/rites")
     public List<RiteRow> rites() {
         return editorService.listRites();
+    }
+
+    /** Варианты для блока «Связи» в форме обряда (FR-3.3). */
+    @GetMapping("/relation-options")
+    public RelationOptions relationOptions() {
+        return editorService.relationOptions();
     }
 
     @GetMapping("/rites/{riteId}")
