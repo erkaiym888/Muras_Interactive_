@@ -156,3 +156,12 @@
 .ad-date{color:#8a7d73;font-size:13px;margin:0 0 14px}
 .cab-card .progress-panel .pp-stats b{font-size:24px}
 @media(max-width:760px){.pp-stats{grid-template-columns:repeat(2,1fr)}.pp-topics li{grid-template-columns:1fr auto}.pp-track{grid-column:1/-1;order:3}.history-list button{grid-template-columns:56px 1fr auto;gap:10px}.hl-date,.hl-go{display:none}.history-tools{flex-direction:column;align-items:flex-start}}
+/* Личный кабинет: сверху обложка с фотографией с главной страницы, ниже - обычный фон */
+.cab-cover{height:300px;background-color:#d9cdbd;background-size:cover;background-position:center 40%}
+.cab-page>main.catalog{position:relative;margin-top:-170px;padding-top:0}
+.cab-page .cab-grid{margin-top:0}
+.cab-page .cab-card,.cab-page .quiz-gate{border-radius:14px;box-shadow:0 10px 30px #5b39201a}
+.cab-page .cab-card .btn,.cab-page .quiz-gate .btn,.cab-page .cab-x{border-radius:8px}
+.cab-page .cab-note{border-radius:0 8px 8px 0}
+.cab-page>main>p[role]{background:var(--white);border-radius:14px;padding:28px;box-shadow:0 10px 30px #5b39201a}
+@media(max-width:900px){.cab-cover{height:220px}.cab-page>main.catalog{margin-top:-120px}}
