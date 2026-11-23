@@ -7,10 +7,13 @@ import type { SearchKind, SearchResult } from './api'
  * С 2 символов под строкой появляется выпадающий список найденного (названия, вид, фрагмент
  * с подсвеченными словами). Переход - только по выбору варианта: кликом или стрелками и Enter.
  * Отдельной страницы поиска нет.
+ *
+ * FR-4.2: подсказки с 2 символов, не больше 7 вариантов; сервер учитывает формы слова и опечатки
+ * (до 2 ошибок в слове) - тогда над списком пишется, по какому запросу показаны результаты.
  */
 
 export const MIN_QUERY = 2
-const LIMIT = 8
+const LIMIT = 7
 const DEBOUNCE_MS = 250
 const KIND_LABEL: Record<SearchKind, string> = { rite: 'Обряд', hero: 'Герой', work: 'Произведение', yurt: 'Элемент юрты' }
 
@@ -19,7 +22,7 @@ const SearchIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx=
 type State =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'ready'; query: string; total: number; results: SearchResult[] }
+  | { status: 'ready'; query: string; corrected: string | null; total: number; results: SearchResult[] }
   | { status: 'error' }
 
 export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) {
@@ -41,7 +44,7 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
     const my = ++seq.current
     const t = setTimeout(() => {
       search(q, LIMIT)
-        .then(r => { if (my === seq.current) { setState({ status: 'ready', query: r.query, total: r.total, results: r.results }); setActive(-1) } })
+        .then(r => { if (my === seq.current) { setState({ status: 'ready', query: r.query, corrected: r.corrected, total: r.total, results: r.results }); setActive(-1) } })
         .catch(() => { if (my === seq.current) setState({ status: 'error' }) })
     }, DEBOUNCE_MS)
     return () => clearTimeout(t)
@@ -96,13 +99,15 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
         {state.status === 'loading' && <p className="drop-note" role="status">Ищем…</p>}
         {state.status === 'error' && <p className="drop-note" role="alert">Поиск сейчас недоступен</p>}
         {state.status === 'ready' && results.length === 0 && <p className="drop-note" role="status">Ничего не найдено. Попробуйте начало слова или другое слово.</p>}
+        {state.status === 'ready' && state.corrected && results.length > 0 &&
+          <p className="drop-note corrected" role="status">Показаны результаты для «<b>{state.corrected}</b>»</p>}
         <ul id={listId} role="listbox" aria-label="Найденные материалы">
           {results.map((r, i) => <li key={`${r.kind}-${r.id ?? r.key}`} id={optionId(i)} role="option" aria-selected={i === active}
             className={`drop-item k-${r.kind}${i === active ? ' active' : ''}`}
             onMouseEnter={() => setActive(i)} onMouseDown={e => e.preventDefault()} onClick={() => choose(r)}>
             <span className="drop-dot" aria-hidden="true" />
             <span className="drop-text">
-              <b><Highlighted text={r.title} words={queryWords(value)} /></b>
+              <b><Highlighted text={r.title} words={queryWords(state.status === 'ready' && state.corrected ? `${value} ${state.corrected}` : value)} /></b>
               {r.snippet && <span className="drop-snippet"><Highlighted text={r.snippet} /></span>}
             </span>
             <span className="drop-kind">{KIND_LABEL[r.kind]}</span>

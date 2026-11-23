@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,7 +24,12 @@ import java.util.regex.Pattern;
  * - на случай редких слов - совпадение подстроки в названии.
  * Название весит больше описания (веса A/B/C), совпадение в названии поднимает результат наверх.
  * Показываются только опубликованные обряды. Фронтенд показывает результаты выпадающим списком под строкой
- * поиска в шапке (как в Gmail); учёт опечаток - FR-4.2.
+ * поиска в шапке (как в Gmail).
+ *
+ * Опечатки (FR-4.2): если по запросу как есть найдено мало, каждое незнакомое слово заменяется
+ * ближайшим словом из текстов сайта по расстоянию Левенштейна (fuzzystrmatch): до 1 ошибки в словах
+ * из 4-5 букв, до 2 - в более длинных; слово при наборе сравнивается и с началом слов («манс» -> «манас»).
+ * Результаты по исправленному запросу добавляются после точных, исправление возвращается в corrected.
  */
 @Service
 public class SearchService {
@@ -74,10 +81,43 @@ public class SearchService {
              limit :limit
             """.formatted(STEPS);
 
-    private final NamedParameterJdbcTemplate jdbc;
+    /** Все слова текстов сайта (из опубликованного) - словарь для исправления опечаток. */
+    private static final String SPLIT = "regexp_split_to_table(lower(concat_ws(' ', %s)), '[^[:alpha:][:digit:]]+')";
+    private static final String VOCAB = """
+            with vocab as (
+              select distinct w from (
+                select %1$s as w from rite r where r.status = 'PUBLISHED'
+                union all select %2$s from rite_step s join rite r on r.rite_id = s.rite_id where r.status = 'PUBLISHED'
+                union all select %3$s from folklore_hero h
+                union all select %4$s from folklore_work fw
+                union all select %5$s from yurt_element y
+              ) t where length(w) >= 3
+            )
+            """.formatted(
+            SPLIT.formatted("r.title, r.summary, r.description, r.symbolism"),
+            SPLIT.formatted("s.step_title, s.step_text"),
+            SPLIT.formatted("h.name, h.description"),
+            SPLIT.formatted("fw.title, fw.summary"),
+            SPLIT.formatted("y.name, y.description"));
 
-    public SearchService(NamedParameterJdbcTemplate jdbc) {
+    /** Есть ли в текстах слово, начинающееся так же, - тогда слово считаем написанным верно. */
+    private static final String KNOWN = VOCAB + "select exists(select 1 from vocab where w like :prefix escape '\\')";
+
+    /** Ближайшее слово: сначала по числу ошибок, потом по близости длины. Сравниваем и с началом слова (ввод не закончен). */
+    private static final String NEAREST = VOCAB + """
+            select w from vocab
+             where least(levenshtein(w, :word), levenshtein(left(w, length(:word)), :word)) <= :maxd
+             order by least(levenshtein(w, :word), levenshtein(left(w, length(:word)), :word)),
+                      abs(length(w) - length(:word)), w
+             limit 1
+            """;
+
+    private final NamedParameterJdbcTemplate jdbc;
+    private final FuzzySetup fuzzy;
+
+    public SearchService(NamedParameterJdbcTemplate jdbc, FuzzySetup fuzzy) {
         this.jdbc = jdbc;
+        this.fuzzy = fuzzy;
     }
 
     @Transactional(readOnly = true)
@@ -86,23 +126,70 @@ public class SearchService {
         String clean = query == null ? "" : query.trim();
         List<String> words = words(clean);
         if (clean.length() < MIN_LENGTH || words.isEmpty()) {
-            return new SearchResponseDto(clean, 0, List.of());
+            return new SearchResponseDto(clean, null, 0, List.of());
         }
+        // на один больше - чтобы понять, есть ли ещё
+        List<SearchResultDto> results = new ArrayList<>(find(words, clean, max + 1));
+        String corrected = null;
+        if (results.size() <= max && fuzzy.available()) {
+            List<String> fixed = correct(words);
+            if (!fixed.equals(words)) {
+                Set<String> seen = new HashSet<>();
+                results.forEach(r -> seen.add(key(r)));
+                int before = results.size();
+                for (SearchResultDto r : find(fixed, String.join(" ", fixed), max + 1)) {
+                    if (results.size() > max) break;
+                    if (seen.add(key(r))) results.add(r);
+                }
+                if (results.size() > before) corrected = String.join(" ", fixed);
+            }
+        }
+        boolean more = results.size() > max;
+        List<SearchResultDto> shown = more ? results.subList(0, max) : results;
+        // total: сколько показано, или «больше», если есть ещё (точный подсчёт для списка не нужен)
+        return new SearchResponseDto(clean, corrected, more ? max + 1 : shown.size(), List.copyOf(shown));
+    }
+
+    private List<SearchResultDto> find(List<String> words, String phrase, int limit) {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("tsq", toTsQuery(words))
-                .addValue("like", "%" + escapeLike(clean) + "%")
-                .addValue("limit", max + 1); // на один больше - чтобы понять, есть ли ещё
-        List<SearchResultDto> results = jdbc.query(SQL, params, (rs, i) -> new SearchResultDto(
+                .addValue("like", "%" + escapeLike(phrase) + "%")
+                .addValue("limit", limit);
+        return jdbc.query(SQL, params, (rs, i) -> new SearchResultDto(
                 rs.getString("kind"),
                 rs.getObject("id") == null ? null : rs.getLong("id"),
                 rs.getString("key"),
                 rs.getString("title"),
                 rs.getString("subtitle"),
                 rs.getString("snippet")));
-        boolean more = results.size() > max;
-        List<SearchResultDto> shown = more ? results.subList(0, max) : results;
-        // total: сколько показано, или «больше», если есть ещё (точный подсчёт для списка не нужен)
-        return new SearchResponseDto(clean, more ? max + 1 : shown.size(), List.copyOf(shown));
+    }
+
+    /** Исправляет слова, которых нет в текстах сайта; знакомые и короткие оставляет как есть. */
+    private List<String> correct(List<String> words) {
+        List<String> fixed = new ArrayList<>();
+        for (String w : words) {
+            int maxd = maxDistance(w);
+            if (maxd == 0 || isKnown(w)) { fixed.add(w); continue; }
+            List<String> near = jdbc.queryForList(NEAREST, new MapSqlParameterSource()
+                    .addValue("word", w).addValue("maxd", maxd), String.class);
+            fixed.add(near.isEmpty() ? w : near.get(0));
+        }
+        return fixed;
+    }
+
+    private boolean isKnown(String word) {
+        Boolean known = jdbc.queryForObject(KNOWN, new MapSqlParameterSource("prefix", escapeLike(word) + "%"), Boolean.class);
+        return Boolean.TRUE.equals(known);
+    }
+
+    /** Сколько ошибок допускаем: в коротких словах опечатку не угадать, в длинных - до 2 (п. FR-4.2 ТЗ). */
+    static int maxDistance(String word) {
+        int n = word.length();
+        return n < 4 ? 0 : n <= 5 ? 1 : 2;
+    }
+
+    private static String key(SearchResultDto r) {
+        return r.kind() + ":" + (r.key() != null ? r.key() : r.id());
     }
 
     /** Слова запроса без знаков препинания, в нижнем регистре. */
