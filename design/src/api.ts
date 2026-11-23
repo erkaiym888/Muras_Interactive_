@@ -88,7 +88,7 @@ async function post(url: string, body?: Record<string, string>, asForm = false):
 }
 
 /** Запрос с JSON-телом и CSRF-токеном (POST, PUT, DELETE). Возвращает ответ сервера, если он есть. */
-async function send<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body?: unknown): Promise<T> {
+async function send<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, body?: unknown): Promise<T> {
   const csrfResponse = await fetch('/api/auth/csrf')
   if (!csrfResponse.ok) throw await toApiError(csrfResponse)
   const csrf = (await csrfResponse.json()) as { token: string; headerName: string }
@@ -197,6 +197,8 @@ export const editorRite = (id: number) => getAuthed<RiteForm>(`/api/editor/rites
 export const createRite = (form: RiteForm) => send<RiteForm>('POST', '/api/editor/rites', form)
 export const updateRite = (id: number, form: RiteForm) => send<RiteForm>('PUT', `/api/editor/rites/${id}`, form)
 export const deleteRite = (id: number) => send<void>('DELETE', `/api/editor/rites/${id}`)
+/** Быстрая смена статуса из списка (FR-7.2). */
+export const setRiteStatus = (id: number, status: RiteStatus) => send<EditorRiteRow>('PATCH', `/api/editor/rites/${id}/status`, { status })
 
 export const editorCategories = () => getAuthed<EditorCategory[]>('/api/editor/rite-categories')
 export const createCategory = (name: string) => send<EditorCategory>('POST', '/api/editor/rite-categories', { name })
@@ -341,3 +343,50 @@ export type Cabinet = {
 }
 
 export const fetchCabinet = () => getAuthed<Cabinet>('/api/cabinet')
+// ---------- Редактор: фольклор (FR-7.1) ----------
+
+export type EditorImage = { url: string; caption: string }
+
+export type EditorFolkloreRow = {
+  kind: FolkloreKind
+  id: number
+  title: string
+  typeId: number
+  type: string
+  linkCount: number
+  imageUrl: string | null
+  status: RiteStatus
+}
+
+export type FolkloreHeroForm = {
+  id?: number | null
+  name: string
+  typeId: number | null
+  description: string
+  status?: RiteStatus
+  workIds: number[]
+  images: EditorImage[]
+}
+
+export type FolkloreWorkForm = {
+  id?: number | null
+  title: string
+  typeId: number | null
+  summary: string
+  status?: RiteStatus
+  heroIds: number[]
+  images: EditorImage[]
+}
+
+export const editorFolklore = () => getAuthed<EditorFolkloreRow[]>('/api/editor/folklore')
+export const editorFolkloreTypes = () => getAuthed<FolkloreType[]>('/api/editor/folklore/types')
+export const editorHero = (id: number) => getAuthed<FolkloreHeroForm>(`/api/editor/folklore/heroes/${id}`)
+export const createHero = (form: FolkloreHeroForm) => send<FolkloreHeroForm>('POST', '/api/editor/folklore/heroes', form)
+export const updateHero = (id: number, form: FolkloreHeroForm) => send<FolkloreHeroForm>('PUT', `/api/editor/folklore/heroes/${id}`, form)
+export const deleteHero = (id: number) => send<void>('DELETE', `/api/editor/folklore/heroes/${id}`)
+export const editorWork = (id: number) => getAuthed<FolkloreWorkForm>(`/api/editor/folklore/works/${id}`)
+export const createWork = (form: FolkloreWorkForm) => send<FolkloreWorkForm>('POST', '/api/editor/folklore/works', form)
+export const updateWork = (id: number, form: FolkloreWorkForm) => send<FolkloreWorkForm>('PUT', `/api/editor/folklore/works/${id}`, form)
+export const deleteWork = (id: number) => send<void>('DELETE', `/api/editor/folklore/works/${id}`)
+export const setFolkloreStatus = (kind: FolkloreKind, id: number, status: RiteStatus) =>
+  send<EditorFolkloreRow>('PATCH', `/api/editor/folklore/${kind === 'hero' ? 'heroes' : 'works'}/${id}/status`, { status })
