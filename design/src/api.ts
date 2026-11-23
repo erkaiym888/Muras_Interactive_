@@ -252,3 +252,25 @@ export const updateWork = (id: number, form: FolkloreWorkForm) => send<FolkloreW
 export const deleteWork = (id: number) => send<void>('DELETE', `/api/editor/folklore/works/${id}`)
 export const setFolkloreStatus = (kind: FolkloreKind, id: number, status: RiteStatus) =>
   send<EditorFolkloreRow>('PATCH', `/api/editor/folklore/${kind === 'hero' ? 'heroes' : 'works'}/${id}/status`, { status })
+
+// ---------- Администратор: пользователи и роли (FR-7.3) ----------
+
+export type Role = 'USER' | 'EDITOR' | 'ADMIN'
+export const isAdmin = (user: User | null) => user?.role === 'ADMIN'
+
+export type AdminUserRow = {
+  id: number
+  email: string
+  displayName: string
+  role: Role
+  blocked: boolean
+  totalPoints: number
+  registeredAt: string
+  me: boolean
+}
+export type AdminRole = { name: Role; title: string; description: string; userCount: number }
+
+export const adminUsers = () => getAuthed<AdminUserRow[]>('/api/admin/users')
+export const adminRoles = () => getAuthed<AdminRole[]>('/api/admin/roles')
+export const setUserRole = (id: number, role: Role) => send<AdminUserRow>('PATCH', `/api/admin/users/${id}/role`, { role })
+export const setUserBlocked = (id: number, blocked: boolean) => send<AdminUserRow>('PATCH', `/api/admin/users/${id}/blocked`, { blocked })

@@ -10,4 +10,9 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
     Optional<UserAccount> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    /** Сколько незаблокированных пользователей с ролью - чтобы не остаться без администратора (FR-7.3). */
+    long countByRole_RoleNameAndBlockedFalse(String roleName);
+
+    long countByRole_RoleName(String roleName);
 }
