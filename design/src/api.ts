@@ -277,6 +277,49 @@ export const submitAttempt = (quizId: number, answers: AttemptAnswer[]) =>
 export const fetchHint = (quizId: number, questionId: number) =>
   getAuthed<QuizHint>(`/api/quizzes/${quizId}/questions/${questionId}/hint`)
 
+// ---------- История прохождений и прогресс (FR-5.4) ----------
+
+export type HistoryItem = {
+  attemptId: number
+  quizId: number
+  quizTitle: string
+  topic: QuizTopic
+  score: number
+  correctCount: number
+  questionCount: number
+  pointsEarned: number
+  repeatAttempt: boolean
+  completedAt: string
+}
+export type QuizProgress = {
+  quizId: number
+  title: string
+  topic: QuizTopic
+  difficulty: QuizDifficulty
+  attempts: number
+  bestScore: number | null
+  lastScore: number | null
+  lastCompletedAt: string | null
+  pointsEarned: number
+}
+export type Progress = {
+  totalPoints: number
+  quizzesTotal: number
+  quizzesCompleted: number
+  attemptsCount: number
+  averageBestScore: number
+  correctAnswers: number
+  answeredQuestions: number
+  bestStreak: number
+  topics: { topic: QuizTopic; quizzesTotal: number; quizzesCompleted: number; averageBestScore: number }[]
+  quizzes: QuizProgress[]
+}
+
+export const fetchHistory = (quizId?: number) =>
+  getAuthed<HistoryItem[]>(quizId ? `/api/quizzes/history?quizId=${quizId}` : '/api/quizzes/history')
+export const fetchAttempt = (attemptId: number) => getAuthed<AttemptResult>(`/api/quizzes/history/${attemptId}`)
+export const fetchProgress = () => getAuthed<Progress>('/api/quizzes/progress')
+
 export type FavoriteType = 'RITE' | 'HERO' | 'WORK'
 export type Favorite = { itemType: FavoriteType; itemId: number; title: string; subtitle: string }
 
@@ -287,7 +330,7 @@ export const addFavorite = (type: FavoriteType, id: number) =>
 export const removeFavorite = (type: FavoriteType, id: number) =>
   send<void>('DELETE', `/api/favorites?itemType=${type}&itemId=${id}`)
 
-export type CabinetHistoryItem = { quizTitle: string; scorePercent: number; pointsEarned: number; completedAt: string }
+export type CabinetHistoryItem = { attemptId: number; quizId: number; quizTitle: string; scorePercent: number; pointsEarned: number; repeatAttempt: boolean; completedAt: string }
 export type CabinetAward = { title: string; description: string; awardedAt: string }
 
 export type Cabinet = {
