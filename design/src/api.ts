@@ -269,6 +269,8 @@ export type AttemptResult = {
   points: PointLine[]
   questions: QuestionResult[]
   completedAt: string
+  newAchievements?: Achievement[]
+  levelUp?: Level | null
 }
 export type QuizHint = { available: boolean; text: string; hiddenOptionIds: number[]; revealedPairs: { optionId: number; match: string }[] }
 
@@ -341,3 +343,40 @@ export type Cabinet = {
 }
 
 export const fetchCabinet = () => getAuthed<Cabinet>('/api/cabinet')
+
+// ---------- Награды: уровни и значки (FR-5.3) ----------
+
+export type Level = { number: number; title: string; minPoints: number; reward: string | null }
+export type Achievement = {
+  code: string
+  title: string
+  group: string
+  condition: string
+  bonus: number
+  icon: string | null
+  earned: boolean
+  awardedAt: string | null
+}
+export type Awards = {
+  totalPoints: number
+  level: Level
+  nextLevel: Level | null
+  pointsToNext: number
+  progressPercent: number
+  loginStreak: number
+  levels: Level[]
+  achievements: Achievement[]
+}
+export type RewardEvent = {
+  points: PointLine[]
+  pointsEarned: number
+  totalPoints: number
+  newAchievements: Achievement[]
+  levelUp: Level | null
+}
+export type ViewType = 'YURT_PART' | 'RITE' | 'HERO' | 'WORK' | 'SEARCH'
+
+export const fetchAwards = () => getAuthed<Awards>('/api/awards')
+export const postVisit = () => send<RewardEvent>('POST', '/api/activity/visit')
+export const postView = (type: ViewType, key: string | number) =>
+  send<RewardEvent>('POST', '/api/activity/view', { type, key: String(key) })

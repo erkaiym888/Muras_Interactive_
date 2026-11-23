@@ -37,7 +37,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/editor/**").hasAnyRole(UserRole.EDITOR, UserRole.ADMIN)
-                        .requestMatchers("/api/quizzes/**", "/api/cabinet/**", "/api/favorites/**").authenticated()
+                        .requestMatchers("/api/quizzes/**", "/api/cabinet/**", "/api/favorites/**",
+                                "/api/awards/**", "/api/activity/**").authenticated()
                         .anyRequest().permitAll())
                 .formLogin(form -> form
                         .loginPage("/api/auth/login")
