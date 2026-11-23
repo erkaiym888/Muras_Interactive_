@@ -60,6 +60,7 @@ public class RelationService {
     @Transactional(readOnly = true)
     public RelationsDto forHero(Long heroId) {
         FolkloreHero hero = heroRepository.findById(heroId)
+                .filter(FolkloreHero::isPublished)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Герой не найден"));
         Nodes rites = new Nodes(), works = new Nodes(), yurt = new Nodes();
         hero.getWorks().forEach(w -> works.add(work(w, null)));
@@ -76,6 +77,7 @@ public class RelationService {
     @Transactional(readOnly = true)
     public RelationsDto forWork(Long workId) {
         FolkloreWork work = workRepository.findById(workId)
+                .filter(FolkloreWork::isPublished)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Произведение не найдено"));
         Nodes rites = new Nodes(), heroes = new Nodes(), yurt = new Nodes();
         work.getHeroes().forEach(h -> heroes.add(hero(h, null)));
@@ -117,11 +119,14 @@ public class RelationService {
         return new RelationNodeDto(RITE, r.getRiteId(), null, r.getTitle(), r.getRiteCategory().getCategoryName(), via);
     }
 
+    /** Черновики и скрытые герои и произведения (FR-7.2) в связях не показываются: для них null, Nodes их пропускает. */
     private static RelationNodeDto hero(FolkloreHero h, String via) {
+        if (!h.isPublished()) return null;
         return new RelationNodeDto(HERO, h.getHeroId(), null, h.getName(), h.getHeroType().getTypeName(), via);
     }
 
     private static RelationNodeDto work(FolkloreWork w, String via) {
+        if (!w.isPublished()) return null;
         return new RelationNodeDto(WORK, w.getWorkId(), null, w.getTitle(), w.getWorkType().getTypeName(), via);
     }
 
@@ -134,6 +139,7 @@ public class RelationService {
         private final Map<String, RelationNodeDto> map = new LinkedHashMap<>();
 
         void add(RelationNodeDto node) {
+            if (node == null) return;
             String id = node.kind() + ":" + (node.key() != null ? node.key() : node.id());
             RelationNodeDto existing = map.get(id);
             if (existing == null || (existing.via() != null && node.via() == null)) map.put(id, node);
