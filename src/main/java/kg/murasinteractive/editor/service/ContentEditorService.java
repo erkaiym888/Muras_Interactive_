@@ -68,6 +68,21 @@ public class ContentEditorService {
         return toForm(riteRepository.saveAndFlush(rite));
     }
 
+    /** Быстрая смена статуса обряда (FR-7.2). */
+    @Transactional
+    public RiteRow setRiteStatus(Long riteId, String status) {
+        Rite r = findRite(riteId);
+        // То же правило, что и в форме: в каталоге без аннотации карточка пустая
+        if (Rite.STATUS_PUBLISHED.equals(status) && (r.getSummary() == null || r.getSummary().isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Чтобы опубликовать «" + r.getTitle() + "», добавьте аннотацию в форме обряда");
+        }
+        r.setStatus(status);
+        return new RiteRow(r.getRiteId(), r.getTitle(), r.getRiteCategory().getRiteCategoryId(),
+                r.getRiteCategory().getCategoryName(), r.getStatus(), r.getSteps().size(),
+                r.getMedia().isEmpty() ? null : r.getMedia().get(0).getFilePath());
+    }
+
     @Transactional
     public void deleteRite(Long riteId) {
         riteRepository.delete(findRite(riteId));

@@ -1,5 +1,6 @@
 package kg.murasinteractive.editor.service;
 
+import kg.murasinteractive.content.ContentStatus;
 import kg.murasinteractive.editor.dto.FolkloreHeroForm;
 import kg.murasinteractive.editor.dto.FolkloreRow;
 import kg.murasinteractive.editor.dto.FolkloreWorkForm;
@@ -61,12 +62,12 @@ public class FolkloreEditorService {
         for (FolkloreHero h : heroRepository.findAllByOrderByHeroIdAsc()) {
             rows.add(new FolkloreRow(FolkloreService.KIND_HERO, h.getHeroId(), h.getName(),
                     h.getHeroType().getFolkloreTypeId(), h.getHeroType().getTypeName(), h.getWorks().size(),
-                    firstUrl(h.getMedia())));
+                    firstUrl(h.getMedia()), h.getStatus()));
         }
         for (FolkloreWork w : workRepository.findAllByOrderByWorkIdAsc()) {
             rows.add(new FolkloreRow(FolkloreService.KIND_WORK, w.getWorkId(), w.getTitle(),
                     w.getWorkType().getFolkloreTypeId(), w.getWorkType().getTypeName(), w.getHeroes().size(),
-                    firstUrl(w.getMedia())));
+                    firstUrl(w.getMedia()), w.getStatus()));
         }
         return rows;
     }
@@ -81,6 +82,7 @@ public class FolkloreEditorService {
     @Transactional
     public FolkloreHeroForm createHero(FolkloreHeroForm form) {
         FolkloreHero hero = new FolkloreHero();
+        hero.setStatus(ContentStatus.DRAFT);
         applyHero(hero, form);
         return toForm(heroRepository.save(hero));
     }
@@ -102,6 +104,7 @@ public class FolkloreEditorService {
         hero.setName(form.name().trim());
         hero.setHeroType(findType(form.typeId()));
         hero.setDescription(blankToNull(form.description()));
+        if (form.status() != null) hero.setStatus(form.status());
         hero.getWorks().clear();
         for (Long workId : distinct(form.workIds())) {
             hero.getWorks().add(workRepository.findById(workId)
@@ -112,7 +115,7 @@ public class FolkloreEditorService {
 
     private FolkloreHeroForm toForm(FolkloreHero h) {
         return new FolkloreHeroForm(h.getHeroId(), h.getName(), h.getHeroType().getFolkloreTypeId(),
-                h.getDescription(), h.getWorks().stream().map(FolkloreWork::getWorkId).toList(),
+                h.getDescription(), h.getStatus(), h.getWorks().stream().map(FolkloreWork::getWorkId).toList(),
                 toImages(h.getMedia()));
     }
 
@@ -131,6 +134,7 @@ public class FolkloreEditorService {
     @Transactional
     public FolkloreWorkForm createWork(FolkloreWorkForm form) {
         FolkloreWork work = new FolkloreWork();
+        work.setStatus(ContentStatus.DRAFT);
         applyWork(work, form);
         work = workRepository.save(work);
         linkHeroes(work, form.heroIds());
@@ -160,6 +164,7 @@ public class FolkloreEditorService {
         work.setTitle(form.title().trim());
         work.setWorkType(findType(form.typeId()));
         work.setSummary(blankToNull(form.summary()));
+        if (form.status() != null) work.setStatus(form.status());
         replaceMedia(work.getMedia(), form.images());
     }
 
@@ -182,13 +187,31 @@ public class FolkloreEditorService {
 
     private FolkloreWorkForm toForm(FolkloreWork w) {
         return new FolkloreWorkForm(w.getWorkId(), w.getTitle(), w.getWorkType().getFolkloreTypeId(),
-                w.getSummary(), w.getHeroes().stream().map(FolkloreHero::getHeroId).toList(),
+                w.getSummary(), w.getStatus(), w.getHeroes().stream().map(FolkloreHero::getHeroId).toList(),
                 toImages(w.getMedia()));
     }
 
     private FolkloreWork findWork(Long workId) {
         return workRepository.findById(workId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Произведение не найдено"));
+    }
+
+    // ---------- Статусы (FR-7.2) ----------
+
+    @Transactional
+    public FolkloreRow setHeroStatus(Long heroId, String status) {
+        FolkloreHero h = findHero(heroId);
+        h.setStatus(status);
+        return new FolkloreRow(FolkloreService.KIND_HERO, h.getHeroId(), h.getName(), h.getHeroType().getFolkloreTypeId(),
+                h.getHeroType().getTypeName(), h.getWorks().size(), firstUrl(h.getMedia()), h.getStatus());
+    }
+
+    @Transactional
+    public FolkloreRow setWorkStatus(Long workId, String status) {
+        FolkloreWork w = findWork(workId);
+        w.setStatus(status);
+        return new FolkloreRow(FolkloreService.KIND_WORK, w.getWorkId(), w.getTitle(), w.getWorkType().getFolkloreTypeId(),
+                w.getWorkType().getTypeName(), w.getHeroes().size(), firstUrl(w.getMedia()), w.getStatus());
     }
 
     // ---------- Общее ----------

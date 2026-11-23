@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import kg.murasinteractive.editor.dto.FolkloreHeroForm;
 import kg.murasinteractive.editor.dto.FolkloreRow;
 import kg.murasinteractive.editor.dto.FolkloreWorkForm;
+import kg.murasinteractive.editor.dto.StatusRequest;
 import kg.murasinteractive.editor.service.FolkloreEditorService;
 import kg.murasinteractive.folklore.dto.FolkloreTypeDto;
 import org.springframework.http.HttpStatus;
@@ -73,6 +74,17 @@ public class FolkloreEditorController {
     @PutMapping("/works/{workId}")
     public FolkloreWorkForm updateWork(@PathVariable Long workId, @Valid @RequestBody FolkloreWorkForm form) {
         return editorService.updateWork(workId, form);
+    }
+
+    /** Быстрая смена статуса (FR-7.2). */
+    @PatchMapping("/heroes/{heroId}/status")
+    public FolkloreRow heroStatus(@PathVariable Long heroId, @Valid @RequestBody StatusRequest request) {
+        return editorService.setHeroStatus(heroId, request.status());
+    }
+
+    @PatchMapping("/works/{workId}/status")
+    public FolkloreRow workStatus(@PathVariable Long workId, @Valid @RequestBody StatusRequest request) {
+        return editorService.setWorkStatus(workId, request.status());
     }
 
     @DeleteMapping("/works/{workId}")

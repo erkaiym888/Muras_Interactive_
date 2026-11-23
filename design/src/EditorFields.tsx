@@ -1,8 +1,38 @@
 import type { ReactNode } from 'react'
 import { ApiError } from './api'
-import type { EditorImage } from './api'
+import type { EditorImage, RiteStatus } from './api'
 
 /** Общие части форм редактора контента (обряды и фольклор). */
+
+/** Статусы материала (FR-7.2) - одинаковые для обрядов и фольклора. */
+export const STATUS: Record<RiteStatus, string> = { PUBLISHED: 'Опубликован', DRAFT: 'Черновик', HIDDEN: 'Скрыт' }
+export const STATUS_HINT: Record<RiteStatus, string> = {
+  PUBLISHED: 'Виден всем посетителям в каталоге.',
+  DRAFT: 'Виден только в редакторе, пока вы работаете над текстом.',
+  HIDDEN: 'Убран из каталога, но не удалён.',
+}
+export const STATUSES = Object.keys(STATUS) as RiteStatus[]
+
+/** Выбор статуса в форме: три варианта с пояснением. */
+export function StatusOptions({ value, onChange }: { value: RiteStatus; onChange: (s: RiteStatus) => void }) {
+  return <div className="side-card">
+    <span className="side-label">Статус</span>
+    {STATUSES.map(s => <label className={value === s ? 'status-opt active' : 'status-opt'} key={s}>
+      <input type="radio" name="status" checked={value === s} onChange={() => onChange(s)} />
+      <span><b><em className={`badge ${s.toLowerCase()}`}>{STATUS[s]}</em></b><small>{STATUS_HINT[s]}</small></span>
+    </label>)}
+  </div>
+}
+
+/** Быстрая смена статуса прямо в строке списка. */
+export function StatusSelect({ value, title, busy, onChange }: {
+  value: RiteStatus; title: string; busy?: boolean; onChange: (s: RiteStatus) => void
+}) {
+  return <select className={`status-select st-${value.toLowerCase()}`} value={value} disabled={busy}
+    aria-label={`Статус: ${title}`} title={STATUS_HINT[value]} onChange={e => onChange(e.target.value as RiteStatus)}>
+    {STATUSES.map(s => <option key={s} value={s}>{STATUS[s]}</option>)}
+  </select>
+}
 
 export function errorText(e: unknown, fallback: string) {
   if (e instanceof ApiError) {
