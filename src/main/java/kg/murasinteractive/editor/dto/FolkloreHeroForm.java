@@ -3,6 +3,8 @@ package kg.murasinteractive.editor.dto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import kg.murasinteractive.content.ContentStatus;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
@@ -19,6 +21,10 @@ public record FolkloreHeroForm(
         Long typeId,
 
         String description,
+
+        /** Статус (FR-7.2); если не указан - у нового материала «черновик», у существующего не меняется. */
+        @Pattern(regexp = ContentStatus.PATTERN, message = "Статус: черновик, опубликован или скрыт")
+        String status,
 
         /** Произведения, в которых встречается герой. */
         List<Long> workIds,

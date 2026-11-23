@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   ApiError, canEditContent, createCategory, createRite, deleteCategory, deleteRite, editorCategories,
-  editorRite, editorRites, renameCategory, updateRite,
+  editorRite, editorRites, renameCategory, setRiteStatus, updateRite,
 } from './api'
 import type { EditorCategory, EditorRiteRow, RiteForm, RiteStatus, User } from './api'
-import { Field, ImagesField, errorText, imageErrors } from './EditorFields'
+import { Field, ImagesField, STATUS, STATUSES, StatusOptions, StatusSelect, errorText, imageErrors } from './EditorFields'
 import { FolkloreEditor } from './FolkloreEditor'
 import type { FolkloreRef } from './Folklore'
 
@@ -14,12 +14,6 @@ import type { FolkloreRef } from './Folklore'
  * Страница видна только ролям EDITOR и ADMIN; сервер дополнительно проверяет роль на каждом запросе.
  */
 
-const STATUS: Record<RiteStatus, string> = { PUBLISHED: 'Опубликован', DRAFT: 'Черновик', HIDDEN: 'Скрыт' }
-const STATUS_HINT: Record<RiteStatus, string> = {
-  PUBLISHED: 'Виден всем посетителям в каталоге.',
-  DRAFT: 'Виден только в редакторе, пока вы работаете над текстом.',
-  HIDDEN: 'Убран из каталога, но не удалён.',
-}
 
 const emptyForm = (): RiteForm => ({
   title: '', categoryId: null, status: 'DRAFT', summary: '', description: '', symbolism: '', sources: '',
@@ -88,6 +82,7 @@ function RiteList({ onEdit, onCreate, openRite, notify }: {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<RiteStatus | 'ALL'>('ALL')
   const [confirm, setConfirm] = useState<number | null>(null)
+  const [busy, setBusy] = useState<number | null>(null)
 
   const load = () => editorRites().then(setRows).catch(e => setError(errorText(e, 'Не удалось загрузить обряды.')))
   useEffect(() => { load() }, [])
@@ -106,6 +101,15 @@ function RiteList({ onEdit, onCreate, openRite, notify }: {
     } catch (e) { setError(errorText(e, 'Не удалось удалить обряд.')) }
   }
 
+  const changeStatus = async (row: EditorRiteRow, next: RiteStatus) => {
+    setBusy(row.id); setError('')
+    try {
+      const updated = await setRiteStatus(row.id, next)
+      setRows(rs => (rs ?? []).map(r => r.id === row.id ? { ...r, ...updated } : r))
+      notify(`«${row.title}»: ${STATUS[next].toLowerCase()}`)
+    } catch (e) { setError(errorText(e, 'Не удалось сменить статус.')) } finally { setBusy(null) }
+  }
+
   const counts = (s: RiteStatus) => (rows ?? []).filter(r => r.status === s).length
 
   return <section>
@@ -113,7 +117,7 @@ function RiteList({ onEdit, onCreate, openRite, notify }: {
       <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Найти по названию или категории" aria-label="Поиск" />
       <select value={status} onChange={e => setStatus(e.target.value as RiteStatus | 'ALL')} aria-label="Статус">
         <option value="ALL">Все статусы · {rows?.length ?? 0}</option>
-        {(Object.keys(STATUS) as RiteStatus[]).map(s => <option key={s} value={s}>{STATUS[s]} · {counts(s)}</option>)}
+        {STATUSES.map(s => <option key={s} value={s}>{STATUS[s]} · {counts(s)}</option>)}
       </select>
       <button className="btn" onClick={onCreate}>+ Добавить обряд</button>
     </div>
@@ -127,7 +131,7 @@ function RiteList({ onEdit, onCreate, openRite, notify }: {
           {r.imageUrl ? <img src={r.imageUrl} alt="" /> : <i className="thumb-empty" aria-hidden="true">✦</i>}
           <span><b>{r.title}</b><small>{r.category}</small></span>
         </span>
-        <span role="cell"><em className={`badge ${r.status.toLowerCase()}`}>{STATUS[r.status]}</em></span>
+        <span role="cell"><StatusSelect value={r.status} title={r.title} busy={busy === r.id} onChange={s => changeStatus(r, s)} /></span>
         <span role="cell" className="num">{r.stepCount}</span>
         <span role="cell" className="row-actions">
           {confirm === r.id ? <>
@@ -237,13 +241,7 @@ function RiteEditor({ id, onCancel, onSaved }: { id: number | null; onCancel: ()
       </div>
 
       <aside className="form-side">
-        <div className="side-card">
-          <span className="side-label">Статус</span>
-          {(Object.keys(STATUS) as RiteStatus[]).map(s => <label className={form.status === s ? 'status-opt active' : 'status-opt'} key={s}>
-            <input type="radio" name="status" checked={form.status === s} onChange={() => set('status', s)} />
-            <span><b><em className={`badge ${s.toLowerCase()}`}>{STATUS[s]}</em></b><small>{STATUS_HINT[s]}</small></span>
-          </label>)}
-        </div>
+        <StatusOptions value={form.status} onChange={s => set('status', s)} />
         <div className="side-card">
           <Field label="Категория *" error={errors.categoryId}>
             <select value={form.categoryId ?? ''} onChange={e => set('categoryId', e.target.value ? Number(e.target.value) : null)}>

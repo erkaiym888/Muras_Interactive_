@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   ApiError, createHero, createWork, deleteHero, deleteWork, editorFolklore, editorFolkloreTypes, editorHero,
-  editorWork, updateHero, updateWork,
+  editorWork, setFolkloreStatus, updateHero, updateWork,
 } from './api'
-import type { EditorFolkloreRow, EditorImage, FolkloreKind, FolkloreType } from './api'
-import { Field, ImagesField, errorText, imageErrors } from './EditorFields'
+import type { EditorFolkloreRow, EditorImage, FolkloreKind, FolkloreType, RiteStatus } from './api'
+import { Field, ImagesField, STATUS, STATUSES, StatusOptions, StatusSelect, errorText, imageErrors } from './EditorFields'
 import type { FolkloreRef } from './Folklore'
 
 /** Управление фольклором (FR-7.1): герои и произведения, связи между ними, иллюстрации. */
@@ -33,16 +33,28 @@ function FolkloreList({ notify, openFolklore, onEdit }: {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [kind, setKind] = useState<FolkloreKind | 'ALL'>('ALL')
+  const [status, setStatus] = useState<RiteStatus | 'ALL'>('ALL')
   const [confirm, setConfirm] = useState<string | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
 
   const load = () => editorFolklore().then(setRows).catch(e => setError(errorText(e, 'Не удалось загрузить фольклор.')))
   useEffect(() => { load() }, [])
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return (rows ?? []).filter(r => (kind === 'ALL' || r.kind === kind) &&
+    return (rows ?? []).filter(r => (kind === 'ALL' || r.kind === kind) && (status === 'ALL' || r.status === status) &&
       (r.title.toLowerCase().includes(q) || r.type.toLowerCase().includes(q)))
-  }, [rows, search, kind])
+  }, [rows, search, kind, status])
+
+  const changeStatus = async (r: EditorFolkloreRow, next: RiteStatus) => {
+    const key = `${r.kind}-${r.id}`
+    setBusy(key); setError('')
+    try {
+      const updated = await setFolkloreStatus(r.kind, r.id, next)
+      setRows(rs => (rs ?? []).map(x => x.kind === r.kind && x.id === r.id ? { ...x, ...updated } : x))
+      notify(`«${r.title}»: ${STATUS[next].toLowerCase()}`)
+    } catch (e) { setError(errorText(e, 'Не удалось сменить статус.')) } finally { setBusy(null) }
+  }
 
   const remove = async (r: EditorFolkloreRow) => {
     try {
@@ -54,6 +66,7 @@ function FolkloreList({ notify, openFolklore, onEdit }: {
   }
 
   const count = (k: FolkloreKind) => (rows ?? []).filter(r => r.kind === k).length
+  const countStatus = (s: RiteStatus) => (rows ?? []).filter(r => r.status === s).length
 
   return <section>
     <div className="editor-toolbar">
@@ -63,20 +76,25 @@ function FolkloreList({ notify, openFolklore, onEdit }: {
         <option value="hero">Герои · {count('hero')}</option>
         <option value="work">Произведения · {count('work')}</option>
       </select>
+      <select value={status} onChange={e => setStatus(e.target.value as RiteStatus | 'ALL')} aria-label="Статус">
+        <option value="ALL">Все статусы</option>
+        {STATUSES.map(s => <option key={s} value={s}>{STATUS[s]} · {countStatus(s)}</option>)}
+      </select>
       <button className="btn ghost" onClick={() => onEdit('hero', null)}>+ Герой</button>
       <button className="btn" onClick={() => onEdit('work', null)}>+ Произведение</button>
     </div>
     {error && <p className="editor-error" role="alert">{error}</p>}
     {rows === null && !error && <p className="editor-empty" role="status">Загрузка…</p>}
     {rows !== null && shown.length === 0 && <p className="editor-empty">{rows.length === 0 ? 'Пока пусто. Добавьте героя или произведение.' : 'Ничего не найдено.'}</p>}
-    {shown.length > 0 && <div className="editor-table" role="table" aria-label="Фольклор">
-      <div className="row head" role="row"><span role="columnheader">Материал</span><span role="columnheader">Вид</span><span role="columnheader">Связей</span><span role="columnheader"><span className="sr-only">Действия</span></span></div>
+    {shown.length > 0 && <div className="editor-table folk" role="table" aria-label="Фольклор">
+      <div className="row head" role="row"><span role="columnheader">Материал</span><span role="columnheader">Вид</span><span role="columnheader">Статус</span><span role="columnheader">Связей</span><span role="columnheader"><span className="sr-only">Действия</span></span></div>
       {shown.map(r => { const key = `${r.kind}-${r.id}`; return <div className="row" role="row" key={key}>
         <span role="cell" className="title-cell">
           {r.imageUrl ? <img src={r.imageUrl} alt="" /> : <i className="thumb-empty" aria-hidden="true">✦</i>}
           <span><b>{r.title}</b><small>{r.type}</small></span>
         </span>
         <span role="cell"><em className={`badge kind-${r.kind}`}>{KIND[r.kind]}</em></span>
+        <span role="cell"><StatusSelect value={r.status} title={r.title} busy={busy === key} onChange={s => changeStatus(r, s)} /></span>
         <span role="cell" className="num" title={r.kind === 'hero' ? 'Произведений с этим героем' : 'Героев в произведении'}>{r.linkCount}</span>
         <span role="cell" className="row-actions">
           {confirm === key ? <>
@@ -84,7 +102,7 @@ function FolkloreList({ notify, openFolklore, onEdit }: {
             <button className="danger" onClick={() => remove(r)}>Да, удалить</button>
             <button onClick={() => setConfirm(null)}>Отмена</button>
           </> : <>
-            <button onClick={() => openFolklore({ kind: r.kind, id: r.id })}>На сайте</button>
+            {r.status === 'PUBLISHED' && <button onClick={() => openFolklore({ kind: r.kind, id: r.id })}>На сайте</button>}
             <button onClick={() => onEdit(r.kind, r.id)}>Изменить</button>
             <button className="danger-link" onClick={() => setConfirm(key)} aria-label={`Удалить ${r.title}`}>Удалить</button>
           </>}
@@ -96,13 +114,13 @@ function FolkloreList({ notify, openFolklore, onEdit }: {
 
 // ---------- Форма героя или произведения ----------
 
-type Draft = { title: string; typeId: number | null; text: string; links: number[]; images: EditorImage[] }
+type Draft = { title: string; typeId: number | null; text: string; status: RiteStatus; links: number[]; images: EditorImage[] }
 
 function FolkloreForm({ kind, id, onCancel, onSaved }: {
   kind: FolkloreKind; id: number | null; onCancel: () => void; onSaved: (text: string) => void
 }) {
   const isHero = kind === 'hero'
-  const [draft, setDraft] = useState<Draft | null>(id === null ? { title: '', typeId: null, text: '', links: [], images: [] } : null)
+  const [draft, setDraft] = useState<Draft | null>(id === null ? { title: '', typeId: null, text: '', status: 'DRAFT', links: [], images: [] } : null)
   const [types, setTypes] = useState<FolkloreType[]>([])
   const [options, setOptions] = useState<EditorFolkloreRow[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -115,8 +133,8 @@ function FolkloreForm({ kind, id, onCancel, onSaved }: {
     editorFolklore().then(rows => setOptions(rows.filter(r => r.kind !== kind))).catch(() => {})
     if (id === null) return
     const load = isHero
-      ? editorHero(id).then(h => ({ title: h.name, typeId: h.typeId, text: h.description ?? '', links: h.workIds ?? [], images: h.images ?? [] }))
-      : editorWork(id).then(w => ({ title: w.title, typeId: w.typeId, text: w.summary ?? '', links: w.heroIds ?? [], images: w.images ?? [] }))
+      ? editorHero(id).then(h => ({ title: h.name, typeId: h.typeId, text: h.description ?? '', status: h.status ?? 'PUBLISHED', links: h.workIds ?? [], images: h.images ?? [] }))
+      : editorWork(id).then(w => ({ title: w.title, typeId: w.typeId, text: w.summary ?? '', status: w.status ?? 'PUBLISHED', links: w.heroIds ?? [], images: w.images ?? [] }))
     load.then(d => setDraft({ ...d, images: d.images.map(m => ({ url: m.url ?? '', caption: m.caption ?? '' })) }))
       .catch(e => setFormError(errorText(e, 'Не удалось загрузить материал.')))
   }, [kind, id, isHero])
@@ -149,10 +167,10 @@ function FolkloreForm({ kind, id, onCancel, onSaved }: {
     try {
       let name: string
       if (isHero) {
-        const body = { name: draft.title, typeId: draft.typeId, description: draft.text, workIds: draft.links, images: draft.images }
+        const body = { name: draft.title, typeId: draft.typeId, description: draft.text, status: draft.status, workIds: draft.links, images: draft.images }
         name = (id === null ? await createHero(body) : await updateHero(id, body)).name
       } else {
-        const body = { title: draft.title, typeId: draft.typeId, summary: draft.text, heroIds: draft.links, images: draft.images }
+        const body = { title: draft.title, typeId: draft.typeId, summary: draft.text, status: draft.status, heroIds: draft.links, images: draft.images }
         name = (id === null ? await createWork(body) : await updateWork(id, body)).title
       }
       onSaved(id === null ? `«${name}» ${isHero ? 'добавлен' : 'добавлено'}` : `Изменения в «${name}» сохранены`)
@@ -188,6 +206,7 @@ function FolkloreForm({ kind, id, onCancel, onSaved }: {
         </fieldset>
       </div>
       <aside className="form-side">
+        <StatusOptions value={draft.status} onChange={s => set('status', s)} />
         <div className="side-card">
           <span className="side-label">Вид</span>
           <p className="kind-line"><em className={`badge kind-${kind}`}>{KIND[kind]}</em></p>
