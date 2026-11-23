@@ -269,3 +269,59 @@
 .status-select option{background:#fff;color:var(--ink)}
 @media(max-width:1000px){.editor-table.folk .row{grid-template-columns:minmax(0,1fr) auto auto}.editor-table.folk .head span:nth-child(3){display:inline}}
 @media(max-width:700px){.editor-table.folk .row{grid-template-columns:auto minmax(0,1fr);row-gap:10px}.editor-table.folk .row .title-cell{grid-column:1/-1}.editor-table.folk .head span:not(:first-child){display:none}.editor-table.folk .head{grid-template-columns:1fr}}
+/* FR-7.3: пользователи и роли */
+.role-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:0 0 30px}
+.role-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:20px 22px;background:var(--white);border:1px solid #e3d9cb;border-top:3px solid var(--rc,#c9b79c);color:var(--ink);transition:border-color .2s,box-shadow .2s}
+.role-card b{font:34px/1 Prata,serif;color:var(--rc,var(--wine))}
+.role-card span{font-weight:600;font-size:14px;margin-top:6px}
+.role-card small{color:#8a7d73;font-size:12px;line-height:1.45}
+.role-card:hover{box-shadow:0 8px 24px #5b39201a}
+.role-card.active{border-color:var(--rc);box-shadow:inset 0 0 0 1px var(--rc)}
+.r-user{--rc:#8a7d73}.r-editor{--rc:#b07d2f}.r-admin{--rc:#6e1f2a}
+.editor-table.users .row{grid-template-columns:minmax(0,1fr) 190px 70px 120px 250px}
+.editor-table.users .row.is-blocked .title-cell{opacity:.6}
+.editor-table .date{font-size:13px;color:#766a61}
+.user-initial{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;font:normal 17px Prata,serif;background:#efe6d8;color:var(--wine)}
+.me-tag{font-style:normal;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-left:8px;font-weight:600}
+.badge.blocked-tag{background:#f6dfdc;color:#9a2f25;margin-left:8px;font-size:10px;padding:3px 8px}
+.editor select.role-select{border:1px solid var(--rc);border-radius:2px;padding:7px 28px 7px 10px;font-size:13px;color:var(--rc);font-weight:600;max-width:100%}
+.role-pill{font-style:normal;font-size:13px;font-weight:600;color:var(--rc)}
+.admin-note{margin-top:18px;font-size:12px;color:#8a7d73}
+@media(max-width:1000px){.editor-table.users .row{grid-template-columns:minmax(0,1fr) auto}.editor-table.users .row .date,.editor-table.users .head span:nth-child(n+3){display:none}.editor-table.users .head span:nth-child(2){display:inline}}
+@media(max-width:700px){.role-cards{grid-template-columns:1fr;gap:10px}.role-card{flex-direction:row;align-items:center;gap:14px;padding:14px 16px}.role-card b{font-size:26px;min-width:34px}.role-card span{margin:0}.role-card small{display:none}.editor-table.users .row .title-cell{grid-column:1/-1}.editor-table.users .head span:not(:first-child){display:none}.editor-table.users .head{grid-template-columns:1fr}}
+/* FR-8.1: языки и переводы */
+.lang-switch{display:flex;gap:6px;margin:4px 0 18px}
+.lang-switch button{border:1px solid #d6cbbc;background:transparent;padding:7px 14px;font-size:12px;color:#685f58;border-radius:999px}
+.lang-switch button.active{background:var(--wine);border-color:var(--wine);color:#fff}
+.lang-list{background:var(--white);border:1px solid #e3d9cb}
+.lang-row{display:grid;grid-template-columns:56px minmax(0,1fr) 100px 140px;align-items:center;gap:16px;padding:18px 22px;border-top:1px solid #eee6da}
+.lang-row:first-child{border-top:0}
+.lang-code{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;text-transform:uppercase;font:600 13px Manrope,sans-serif;letter-spacing:.06em;background:#efe6d8;color:#8a7d73}
+.lang-row.on .lang-code{background:var(--wine);color:#fff}
+.lang-name b{display:block;font-size:15px}.lang-name small{color:#8a7d73;font-size:12px}
+.lang-state{font-size:12px;color:#8a7d73}.lang-row.on .lang-state{color:#3c6233;font-weight:600}
+.lang-lock{font-size:12px;color:#8a7d73;justify-self:end}
+.switch-btn{justify-self:end;width:46px;height:26px;border-radius:999px;border:0;background:#d9cfc2;position:relative;transition:background .2s}
+.switch-btn i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .2s}
+.switch-btn.on{background:#3c6233}.switch-btn.on i{transform:translateX(20px)}
+.switch-btn:focus-visible{outline:2px solid var(--wine);outline-offset:2px}
+.lang-steps{margin-top:24px;padding:20px 24px;background:#eee5d7;font-size:13px;line-height:1.6}
+.lang-steps ol{margin:8px 0 0;padding-left:20px}.lang-steps code{font-size:12px;background:#fff8;padding:1px 5px}
+.tr-note{font-size:13px;color:#8a6420;background:#f4ead6;padding:10px 14px;margin:-6px 0 18px}
+.editor-table.tr-table .row{grid-template-columns:minmax(0,1fr) 220px 200px}
+.tr-bar{display:inline-block;vertical-align:middle;width:140px;height:6px;background:#eee6da;border-radius:3px;overflow:hidden}
+.tr-bar i{display:block;height:100%;background:var(--gold)}.tr-bar.done i{background:#3c6233}
+.tr-pct{margin-left:10px;font-size:12px;color:#766a61}
+.tr-form h2 small{font:14px Manrope,sans-serif;color:#8a7d73}
+.tr-grid{background:var(--white);border:1px solid #e3d9cb}
+.tr-head,.tr-pair{display:grid;grid-template-columns:1fr 1fr;gap:28px;padding:16px 22px}
+.tr-head{background:#f3ede3;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#8a7d73;padding-top:12px;padding-bottom:12px}
+.tr-pair{border-top:1px solid #eee6da}
+.tr-label{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:6px}
+.tr-orig p{margin:0;font-size:14px;line-height:1.65;color:#4c423c;white-space:pre-line}
+.tr-pair .ed-field{margin:0;align-self:end}
+@media(max-width:900px){.tr-head{display:none}.tr-pair{grid-template-columns:1fr;gap:10px}.editor-table.tr-table .row{grid-template-columns:minmax(0,1fr) auto}.editor-table.tr-table .row .row-actions{grid-column:1/-1}.lang-row{grid-template-columns:44px minmax(0,1fr) auto;row-gap:6px}.lang-state{display:none}}
+.drawer .lang-switch button{border:1px solid #ffffff40;background:transparent;color:#eadccf;padding:7px 14px;font-size:12px;border-radius:999px;min-height:0}
+.drawer .lang-switch button.active{background:var(--sand);border-color:var(--sand);color:var(--wine);font-weight:600}
+.drawer .lang-switch button:focus-visible{outline:2px solid var(--sand);outline-offset:2px}
+.lang-steps ol{list-style:decimal}
