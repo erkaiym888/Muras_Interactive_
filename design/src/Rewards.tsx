@@ -89,9 +89,10 @@ export function BadgeIcon({ code, earned }: { code: string; earned: boolean }) {
 
 // ---------- Аватар с рамкой уровня ----------
 
-export function LevelAvatar({ name, level, size = 'lg' }: { name: string; level: number; size?: 'lg' | 'sm' }) {
+/** Аватар с рамкой уровня: фото пользователя (FR-6.2) или первая буква имени. */
+export function LevelAvatar({ name, level, size = 'lg', avatarUrl }: { name: string; level: number; size?: 'lg' | 'sm'; avatarUrl?: string | null }) {
   return <span className={`level-avatar l${level} ${size}`} aria-hidden="true">
-    <span>{name.trim().charAt(0).toUpperCase()}</span>
+    {avatarUrl ? <img className="level-photo" src={avatarUrl} alt="" /> : <span>{name.trim().charAt(0).toUpperCase()}</span>}
   </span>
 }
 

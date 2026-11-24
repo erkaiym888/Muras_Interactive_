@@ -52,7 +52,8 @@ export const fetchRite = (id: number) => getJson<RiteDetail>(`/api/rites/${id}`)
 
 // ---------- Учётные записи (FR-6.1) ----------
 
-export type User = { id: number; email: string; displayName: string; role: string }
+/** avatarUrl - адрес аватара или null (FR-6.2) */
+export type User = { id: number; email: string; displayName: string; role: string; avatarUrl?: string | null }
 
 /** Ошибка от сервера: статус, ошибки по полям формы и общее сообщение. */
 export class ApiError extends Error {
@@ -342,13 +343,20 @@ export type CabinetHistoryItem = { attemptId: number; quizId: number; quizTitle:
 export type CabinetAward = { title: string; description: string; awardedAt: string }
 
 export type Cabinet = {
-  profile: { displayName: string; email: string; role: string; registeredAt: string; totalPoints: number }
+  profile: { displayName: string; email: string; role: string; avatarUrl: string | null; registeredAt: string; totalPoints: number }
   history: CabinetHistoryItem[]
   awards: CabinetAward[]
   favorites: Favorite[]
 }
 
 export const fetchCabinet = () => getAuthed<Cabinet>('/api/cabinet')
+
+// Редактирование профиля (FR-6.2): каждый запрос возвращает обновлённого пользователя
+export const updateDisplayName = (displayName: string) => send<User>('PATCH', '/api/cabinet/profile/name', { displayName })
+export const updateEmail = (email: string, currentPassword: string) =>
+  send<User>('PATCH', '/api/cabinet/profile/email', { email, currentPassword })
+export const uploadAvatar = (dataUrl: string) => send<User>('PUT', '/api/cabinet/profile/avatar', { dataUrl })
+export const deleteAvatar = () => send<User>('DELETE', '/api/cabinet/profile/avatar')
 
 // ---------- Награды: уровни и значки (FR-5.3) ----------
 

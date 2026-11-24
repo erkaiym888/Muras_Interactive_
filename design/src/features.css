@@ -262,3 +262,37 @@
 .cab-page .cab-note{border-radius:0 8px 8px 0}
 .cab-page>main>p[role]{background:var(--white);border-radius:14px;padding:28px;box-shadow:0 10px 30px #5b39201a}
 @media(max-width:900px){.cab-cover{height:220px}.cab-page>main.catalog{margin-top:-120px}}
+/* FR-6.2: аватар и редактирование профиля */
+.user-avatar{display:block;border-radius:50%;object-fit:cover;flex:none;background:#efe6d8}
+.user-avatar.letter{display:grid;place-items:center;background:var(--wine);color:#fff;font-family:Prata,serif}
+.user-avatar.sm{width:42px;height:42px;font-size:17px}
+.user-avatar.md{width:56px;height:56px;font-size:22px}
+.user-avatar.lg{width:96px;height:96px;font-size:38px}
+.cab-profile .user-avatar.lg{margin:0 auto 14px}
+.cab-edit{margin-top:18px;width:100%;min-width:0;border-radius:8px}
+.pe-backdrop{position:fixed;inset:0;z-index:90;background:rgba(30,18,15,.55);display:grid;place-items:center;padding:20px;overflow-y:auto}
+.pe-dialog{width:min(560px,100%);background:var(--ivory,#f7f1e8);border-radius:16px;box-shadow:0 30px 80px #0005;padding:26px 28px 10px}
+.pe-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.pe-head h2{margin:0;font-size:28px}
+.pe-close{border:0;background:none;font-size:28px;line-height:1;color:#7d6f65;width:40px;height:40px;border-radius:50%}
+.pe-close:hover{background:#0000000d}
+.pe-section{padding:20px 0;border-top:1px solid #e3d9cb}
+.pe-section:first-of-type{border-top:0}
+.pe-section h3{margin:0 0 4px;font:600 12px Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#766a61}
+.pe-hint{margin:0 0 12px;font-size:13px;color:#8a7d73}
+.pe-avatar{display:flex;gap:22px;align-items:center}
+.pe-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pe-row.end{justify-content:flex-end;margin-top:12px}
+.pe-row input{flex:1;min-width:180px}
+.pe-dialog input{border:1px solid #d6cbbc;background:#fffdf8;border-radius:8px;padding:11px 13px;font-size:15px;color:var(--ink);outline:none}
+.pe-dialog input:focus{border-color:var(--wine);box-shadow:0 0 0 3px #6e1f2a1f}
+.pe-dialog input[aria-invalid=true]{border-color:#a42b2b}
+.pe-dialog .btn{border-radius:8px;min-width:0;padding:11px 20px}
+.pe-field{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:13px;color:#5f554e}
+.pe-error{margin:8px 0 0;font-size:13px;color:#a42b2b}
+.pe-done{margin:6px 0 0;padding:10px 14px;border-radius:8px;background:#e3eedf;color:#3c6233;font-size:14px}
+@media(max-width:520px){.pe-dialog{padding:20px 18px 6px}.pe-avatar{flex-direction:column;text-align:center}.pe-avatar .pe-row{justify-content:center}}
+.who .user-avatar.letter{background:var(--sand);color:var(--wine)}
+.cab-profile .btn.cab-edit,.pe-dialog .btn.ghost{background:transparent;color:var(--wine);border:1px solid var(--wine);box-shadow:none}
+.cab-profile .btn.cab-edit:hover,.pe-dialog .btn.ghost:hover{background:#6e1f2a0f}
+.level-avatar .level-photo{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}

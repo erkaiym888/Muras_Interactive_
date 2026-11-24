@@ -7,6 +7,7 @@ import type { Awards, Cabinet as CabinetData, Favorite, Progress, User } from '.
 import { AwardsPanel, LevelAvatar, LevelCard } from './Rewards'
 import { AttemptDetail, ProgressPanel, formatDateTime } from './QuizHistory'
 import type { FolkloreRef } from './Folklore'
+import { ProfileEdit } from './ProfileEdit'
 
 type Status = 'loading' | 'ready' | 'error'
 
@@ -15,14 +16,17 @@ const note = { textAlign: 'center' as const, color: '#716861' }
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 
 /** Личный кабинет (FR-6.2): профиль, очки, награды, история викторин и избранное. Доступен любой роли. */
-export function Cabinet({ user, go, openRite, openItem }: {
+export function Cabinet({ user, go, openRite, openItem, onUser }: {
   user: User | null
+  /** Профиль изменён - обновить пользователя во всём приложении (меню, кабинет) */
+  onUser: (u: User) => void
   go: (p: 'login' | 'editor') => void
   openRite: (id: number) => void
   openItem: (ref: FolkloreRef) => void
 }) {
   const [data, setData] = useState<CabinetData | null>(null)
   const [status, setStatus] = useState<Status>('loading')
+  const [editing, setEditing] = useState(false)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [awards, setAwards] = useState<Awards | null>(null)
   const [openAttempt, setOpenAttempt] = useState<number | null>(null)
@@ -62,18 +66,20 @@ export function Cabinet({ user, go, openRite, openItem }: {
       setData({ ...data, favorites: data.favorites.filter(x => !(x.itemType === f.itemType && x.itemId === f.itemId)) })
     } catch { /* список останется прежним */ }
   }
-  const { profile } = data
+  // Профиль показываем из актуального пользователя: после редактирования он меняется сразу
+  const profile = { ...data.profile, displayName: user.displayName, email: user.email, avatarUrl: user.avatarUrl ?? null }
 
   return <CabinetPage><main className="catalog">{title}
     <div className="cab-grid">
       <aside className="cab-card cab-profile">
-        <LevelAvatar name={profile.displayName} level={awards?.level.number ?? 1} />
+        <LevelAvatar name={profile.displayName} level={awards?.level.number ?? 1} avatarUrl={profile.avatarUrl} />
         <h2>{profile.displayName}</h2>
         <p>{profile.email}</p>
         <span className="cab-role">{ROLE[profile.role] ?? profile.role}</span>
         <div className="cab-points"><b>{profile.totalPoints}</b><span>очков</span></div>
         <p className="cab-since">С нами с {formatDate(profile.registeredAt)}</p>
         {awards && <LevelCard awards={awards} />}
+        <button className="btn ghost cab-edit" onClick={() => setEditing(true)}>Редактировать профиль</button>
       </aside>
       <div>
         {canEditContent(user) && <section className="cab-card">
@@ -111,6 +117,7 @@ export function Cabinet({ user, go, openRite, openItem }: {
         </section>
       </div>
     </div>
+    {editing && <ProfileEdit user={user} onUser={onUser} onClose={() => setEditing(false)} />}
   </main></CabinetPage>
 }
 
