@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useId, useRef, useState } from 'react'
 import { search } from './api'
+import { t } from './i18n'
 import type { SearchKind, SearchResult } from './api'
 
 /**
@@ -100,7 +101,7 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
       <input ref={input} type="text" value={value} autoComplete="off" spellCheck={false}
         onChange={e => { setValue(e.target.value); setOpen(true) }}
         onFocus={() => setOpen(true)} onKeyDown={onKey}
-        placeholder="Поиск по музею" aria-label="Поиск по музею"
+        placeholder={t('search.placeholder', 'Поиск по музею')} aria-label={t('search.placeholder', 'Поиск по музею')}
         role="combobox" aria-expanded={showList} aria-controls={listId} aria-autocomplete="list"
         aria-activedescendant={showList && active >= 0 ? optionId(active) : undefined} />
       {value && <button type="button" className="search-clear" onClick={() => { setValue(''); input.current?.focus() }} aria-label="Очистить">×</button>}
@@ -113,9 +114,9 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
           {KINDS.filter(k => counts[k] > 0).map(k => <button type="button" key={k} className={`k-${k}${kind === k ? ' on' : ''}`} aria-pressed={kind === k}
             onMouseDown={e => e.preventDefault()} onClick={() => setKind(kind === k ? null : k)}><i aria-hidden="true" />{GROUP_LABEL[k]} <span>{counts[k]}</span></button>)}
         </div>}
-        {state.status === 'loading' && <p className="drop-note" role="status">Ищем…</p>}
+        {state.status === 'loading' && <p className="drop-note" role="status">{t('search.loading', 'Ищем…')}</p>}
         {state.status === 'error' && <p className="drop-note" role="alert">Поиск сейчас недоступен</p>}
-        {state.status === 'ready' && results.length === 0 && <p className="drop-note" role="status">Ничего не найдено. Попробуйте начало слова или другое слово.</p>}
+        {state.status === 'ready' && results.length === 0 && <p className="drop-note" role="status">{t('search.empty', 'Ничего не найдено. Попробуйте начало слова или другое слово.')}</p>}
         {state.status === 'ready' && state.corrected && results.length > 0 &&
           <p className="drop-note corrected" role="status">Показаны результаты для «<b>{state.corrected}</b>»</p>}
         <ul id={listId} role="listbox" aria-label="Найденные материалы">
