@@ -503,7 +503,8 @@ export const saveTranslation = (type: string, id: number, lang: string, fields: 
 
 export type SearchKind = 'rite' | 'hero' | 'work' | 'yurt'
 export type SearchResult = { kind: SearchKind; id: number | null; key: string | null; title: string; subtitle: string | null; snippet: string | null }
-export type SearchResponse = { query: string; total: number; results: SearchResult[] }
+/** corrected - исправленный запрос, если были опечатки (FR-4.2) */
+export type SearchResponse = { query: string; corrected: string | null; total: number; results: SearchResult[] }
 
 export const search = (q: string, limit?: number) =>
   getJson<SearchResponse>(`/api/search?q=${encodeURIComponent(q)}${limit ? `&limit=${limit}` : ''}`)
