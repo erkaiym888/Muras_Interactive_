@@ -115,7 +115,9 @@ export function Admin({ user, goLogin }: { user: User | null; goLogin: () => voi
       <div className="row head" role="row"><span role="columnheader">Пользователь</span><span role="columnheader">Роль</span><span role="columnheader">Очки</span><span role="columnheader">С нами с</span><span role="columnheader"><span className="sr-only">Действия</span></span></div>
       {shown.map(r => <div className={r.blocked ? 'row is-blocked' : 'row'} role="row" key={r.id}>
         <span role="cell" className="title-cell">
-          <i className="user-initial" aria-hidden="true">{r.displayName.trim().charAt(0).toUpperCase() || '?'}</i>
+          {r.avatarUrl
+            ? <img className="user-initial photo" src={r.avatarUrl} alt="" />
+            : <i className="user-initial" aria-hidden="true">{r.displayName.trim().charAt(0).toUpperCase() || '?'}</i>}
           <span><b>{r.displayName}{r.me && <em className="me-tag">это вы</em>}{r.blocked && <em className="badge blocked-tag">Заблокирован</em>}</b><small>{r.email}</small></span>
         </span>
         <span role="cell">

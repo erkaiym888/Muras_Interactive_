@@ -1,5 +1,6 @@
 import { FavoriteButton } from './Favorite'
 import type { User } from './api'
+import { trackView } from './Rewards'
 import { useEffect, useState } from 'react'
 import { fetchFolkloreDetail, fetchFolkloreItems, fetchFolkloreTypes } from './api'
 import type { FolkloreDetail as Detail, FolkloreItem, FolkloreKind, FolkloreType } from './api'
@@ -80,7 +81,7 @@ export function FolkloreDetail({ go, item, openNode, user }: {
     setStatus('loading')
     window.scrollTo({ top: 0 })
     fetchFolkloreDetail(kind, id)
-      .then(d => { if (alive) { setDetail(d); setStatus('ready') } })
+      .then(d => { if (alive) { setDetail(d); setStatus('ready'); trackView(user, kind === 'hero' ? 'HERO' : 'WORK', id) } })
       .catch(() => alive && setStatus('error'))
     return () => { alive = false }
   }, [kind, id])

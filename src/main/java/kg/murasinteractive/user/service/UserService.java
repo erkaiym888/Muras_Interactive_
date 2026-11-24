@@ -44,7 +44,7 @@ public class UserService {
 
     public static UserDto toDto(UserAccount user) {
         return new UserDto(user.getUserId(), user.getEmail(), user.getDisplayName(),
-                user.getRole().getRoleName());
+                user.getRole().getRoleName(), user.getAvatarUrl());
     }
 
     @Transactional

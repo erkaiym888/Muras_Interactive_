@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { AttemptResult, QuestionResult } from './api'
+import { NewRewards } from './Rewards'
 
 /** Результат прохождения (FR-5.2): процент, очки с расшифровкой, разбор вопросов с пояснениями. */
 
@@ -70,6 +71,8 @@ export function QuizResultView({ result, actions, compact = false }: { result: A
       <li className="sum"><span>Итого за прохождение</span><b>+{result.pointsEarned}</b></li>
       {!compact && <li className="total"><span>Всего у вас</span><b>{result.totalPoints} {pointsWord(result.totalPoints)}</b></li>}
     </ul>
+
+    <NewRewards achievements={result.newAchievements ?? []} levelUp={result.levelUp} />
 
     {actions && <div className="quiz-buttons res-actions">{actions}</div>}
 
