@@ -1,5 +1,6 @@
 package kg.murasinteractive.cabinet.service;
 
+import kg.murasinteractive.awards.service.AwardService;
 import kg.murasinteractive.cabinet.dto.CabinetAwardDto;
 import kg.murasinteractive.cabinet.dto.CabinetDto;
 import kg.murasinteractive.cabinet.dto.CabinetHistoryItemDto;
@@ -19,10 +20,13 @@ public class CabinetService {
 
     private final FavoriteService favoriteService;
     private final QuizHistoryService historyService;
+    private final AwardService awardService;
 
-    public CabinetService(FavoriteService favoriteService, QuizHistoryService historyService) {
+    public CabinetService(FavoriteService favoriteService, QuizHistoryService historyService,
+                          AwardService awardService) {
         this.favoriteService = favoriteService;
         this.historyService = historyService;
+        this.awardService = awardService;
     }
 
     public CabinetDto build(UserAccount user) {
@@ -34,8 +38,10 @@ public class CabinetService {
                 .map(h -> new CabinetHistoryItemDto(h.attemptId(), h.quizId(), h.quizTitle(), h.score(),
                         h.pointsEarned(), h.repeatAttempt(), h.completedAt()))
                 .toList();
-        // TODO FR-5.3: награды (значки и уровни)
-        List<CabinetAwardDto> awards = List.of();
+        // FR-5.3: полученные значки
+        List<CabinetAwardDto> awards = awardService.earned(user.getUserId()).stream()
+                .map(a -> new CabinetAwardDto(a.title(), a.condition(), a.awardedAt()))
+                .toList();
         return new CabinetDto(profile, history, awards, favoriteService.list(user));
     }
 }
