@@ -375,6 +375,18 @@
 footer>div:first-child>p{margin:18px 0 0;line-height:1.6}
 .drop-note.corrected{padding:8px 20px 6px;font-size:12px;color:#8a6420}
 .drop-note.corrected b{font-weight:700}
+/* FR-4.3: группы и фильтр в выпадающем списке поиска */
+.drop-filter{display:flex;flex-wrap:wrap;gap:6px;padding:8px 18px 10px;border-bottom:1px solid #eee6da;margin-bottom:4px}
+.drop-filter button{display:inline-flex;align-items:center;gap:6px;border:1px solid #e1d6c6;background:transparent;border-radius:999px;padding:5px 12px;font-size:12px;color:#5f554e}
+.drop-filter button i{width:7px;height:7px;border-radius:50%;background:var(--k)}
+.drop-filter button span{color:#9a8d82;font-size:11px}
+.drop-filter button:hover{background:#f3ece1}
+.drop-filter button.on{background:var(--wine);border-color:var(--wine);color:#fff}
+.drop-filter button.on span{color:#f1dfc9}
+.drop-filter button.on i{background:#fff}
+.drop-group{display:flex;align-items:center;gap:8px;padding:10px 20px 4px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#9a8d82;font-weight:600}
+.drop-group span{font-weight:400;letter-spacing:0;color:#b3a79c}
+.search-drop .drop-kind{display:none}
 .rel-pick .hint-text{font-size:12px;color:#8a7d73;margin:0 0 12px}
 .rel-pick-group{margin:0 0 16px}
 .rel-pick-title{display:flex;align-items:center;gap:8px;font:600 10px Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#766a61;margin-bottom:8px}

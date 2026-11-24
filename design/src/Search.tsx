@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { Fragment, useEffect, useId, useRef, useState } from 'react'
 import { search } from './api'
 import type { SearchKind, SearchResult } from './api'
 
@@ -10,19 +10,24 @@ import type { SearchKind, SearchResult } from './api'
  *
  * FR-4.2: подсказки с 2 символов, не больше 7 вариантов; сервер учитывает формы слова и опечатки
  * (до 2 ошибок в слове) - тогда над списком пишется, по какому запросу показаны результаты.
+ *
+ * FR-4.3: результаты сгруппированы по виду материала (обряды, герои, произведения, юрта) с заголовками,
+ * сверху - фильтр по виду с числом найденного.
  */
 
 export const MIN_QUERY = 2
 const LIMIT = 7
 const DEBOUNCE_MS = 250
 const KIND_LABEL: Record<SearchKind, string> = { rite: 'Обряд', hero: 'Герой', work: 'Произведение', yurt: 'Элемент юрты' }
+const GROUP_LABEL: Record<SearchKind, string> = { rite: 'Обряды', hero: 'Герои', work: 'Произведения', yurt: 'Юрта' }
+const KINDS: SearchKind[] = ['rite', 'hero', 'work', 'yurt']
 
 const SearchIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
 
 type State =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'ready'; query: string; corrected: string | null; total: number; results: SearchResult[] }
+  | { status: 'ready'; query: string; corrected: string | null; total: number; counts: Record<SearchKind, number>; results: SearchResult[] }
   | { status: 'error' }
 
 export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) {
@@ -31,6 +36,8 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
   const [open, setOpen] = useState(false)          // выпадающий список
   const [mobileOpen, setMobileOpen] = useState(false) // поле на телефоне
   const [active, setActive] = useState(-1)
+  const [kind, setKind] = useState<SearchKind | null>(null) // фильтр по виду (FR-4.3)
+  const [counts, setCounts] = useState<Record<SearchKind, number> | null>(null)
   const box = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
   const seq = useRef(0)
@@ -39,16 +46,20 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
   // Запрос с задержкой: не на каждую букву, а когда пользователь остановился
   useEffect(() => {
     const q = value.trim()
-    if (q.length < MIN_QUERY) { setState({ status: 'idle' }); setActive(-1); return }
+    if (q.length < MIN_QUERY) { setState({ status: 'idle' }); setActive(-1); setCounts(null); return }
     setState({ status: 'loading' })
     const my = ++seq.current
     const t = setTimeout(() => {
-      search(q, LIMIT)
-        .then(r => { if (my === seq.current) { setState({ status: 'ready', query: r.query, corrected: r.corrected, total: r.total, results: r.results }); setActive(-1) } })
+      search(q, LIMIT, kind)
+        .then(r => { if (my === seq.current) { setState({ status: 'ready', query: r.query, corrected: r.corrected, total: r.total, counts: r.counts, results: r.results }); setCounts(r.counts); setActive(-1) } })
         .catch(() => { if (my === seq.current) setState({ status: 'error' }) })
     }, DEBOUNCE_MS)
     return () => clearTimeout(t)
-  }, [value])
+  }, [value, kind])
+
+  // Новый запрос - фильтр сбрасывается на «Все»
+  const prevValue = useRef(value)
+  useEffect(() => { if (prevValue.current.trim() !== value.trim()) setKind(null); prevValue.current = value }, [value])
 
   // Клик мимо - закрываем список
   useEffect(() => {
@@ -63,7 +74,7 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
 
   const choose = (r: SearchResult) => {
     onOpen(r)
-    setValue(''); setOpen(false); setMobileOpen(false); input.current?.blur()
+    setValue(''); setKind(null); setOpen(false); setMobileOpen(false); input.current?.blur()
   }
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -96,13 +107,22 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
       <button type="button" className="search-close" onClick={() => { setMobileOpen(false); setOpen(false) }} aria-label="Закрыть поиск">←</button>
 
       {showList && <div className="search-drop">
+        {counts && KINDS.some(k => counts[k] > 0) && <div className="drop-filter" role="group" aria-label="Показать только">
+          <button type="button" className={kind === null ? 'on' : ''} aria-pressed={kind === null}
+            onMouseDown={e => e.preventDefault()} onClick={() => setKind(null)}>Все <span>{KINDS.reduce((n, k) => n + counts[k], 0)}</span></button>
+          {KINDS.filter(k => counts[k] > 0).map(k => <button type="button" key={k} className={`k-${k}${kind === k ? ' on' : ''}`} aria-pressed={kind === k}
+            onMouseDown={e => e.preventDefault()} onClick={() => setKind(kind === k ? null : k)}><i aria-hidden="true" />{GROUP_LABEL[k]} <span>{counts[k]}</span></button>)}
+        </div>}
         {state.status === 'loading' && <p className="drop-note" role="status">Ищем…</p>}
         {state.status === 'error' && <p className="drop-note" role="alert">Поиск сейчас недоступен</p>}
         {state.status === 'ready' && results.length === 0 && <p className="drop-note" role="status">Ничего не найдено. Попробуйте начало слова или другое слово.</p>}
         {state.status === 'ready' && state.corrected && results.length > 0 &&
           <p className="drop-note corrected" role="status">Показаны результаты для «<b>{state.corrected}</b>»</p>}
         <ul id={listId} role="listbox" aria-label="Найденные материалы">
-          {results.map((r, i) => <li key={`${r.kind}-${r.id ?? r.key}`} id={optionId(i)} role="option" aria-selected={i === active}
+          {results.map((r, i) => <Fragment key={`${r.kind}-${r.id ?? r.key}`}>
+            {(i === 0 || results[i - 1].kind !== r.kind) && <li role="presentation" className="drop-group">{GROUP_LABEL[r.kind]}
+              {state.status === 'ready' && state.counts[r.kind] > 0 && <span>{state.counts[r.kind]}</span>}</li>}
+            <li id={optionId(i)} role="option" aria-selected={i === active}
             className={`drop-item k-${r.kind}${i === active ? ' active' : ''}`}
             onMouseEnter={() => setActive(i)} onMouseDown={e => e.preventDefault()} onClick={() => choose(r)}>
             <span className="drop-dot" aria-hidden="true" />
@@ -111,7 +131,7 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
               {r.snippet && <span className="drop-snippet"><Highlighted text={r.snippet} /></span>}
             </span>
             <span className="drop-kind">{KIND_LABEL[r.kind]}</span>
-          </li>)}
+          </li></Fragment>)}
         </ul>
         {state.status === 'ready' && state.total > results.length &&
           <p className="drop-note more">Показаны первые {results.length} — уточните запрос, чтобы найти остальное</p>}
