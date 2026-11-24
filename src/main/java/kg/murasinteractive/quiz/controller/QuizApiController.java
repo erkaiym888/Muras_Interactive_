@@ -1,6 +1,9 @@
 package kg.murasinteractive.quiz.controller;
 
 import jakarta.validation.Valid;
+import kg.murasinteractive.awards.service.LevelService;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import kg.murasinteractive.quiz.dto.AttemptRequest;
 import kg.murasinteractive.quiz.dto.AttemptResultDto;
 import kg.murasinteractive.quiz.dto.HintDto;
@@ -34,12 +37,14 @@ public class QuizApiController {
     private final QuizService quizService;
     private final QuizScoringService scoringService;
     private final CurrentUserService currentUser;
+    private final LevelService levelService;
 
     public QuizApiController(QuizService quizService, QuizScoringService scoringService,
-                             CurrentUserService currentUser) {
+                             CurrentUserService currentUser, LevelService levelService) {
         this.quizService = quizService;
         this.scoringService = scoringService;
         this.currentUser = currentUser;
+        this.levelService = levelService;
     }
 
     @GetMapping
@@ -48,8 +53,16 @@ public class QuizApiController {
     }
 
     @GetMapping("/{quizId}")
-    public QuizDto quiz(@PathVariable Long quizId) {
-        return quizService.getQuiz(quizId);
+    public QuizDto quiz(@PathVariable Long quizId, Authentication authentication) {
+        QuizDto quiz = quizService.getQuiz(quizId);
+        // FR-5.3: викторины повышенной сложности - с уровня «Акын»
+        int points = currentUser.require(authentication).getTotalPoints();
+        if ("HARD".equals(quiz.difficulty())
+                && levelService.levelFor(points).number() < LevelService.HARD_QUIZ_LEVEL) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Викторины повышенной сложности открываются на уровне «Акын» (800 очков)");
+        }
+        return quiz;
     }
 
     @GetMapping("/{quizId}/questions/{questionId}/hint")
