@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useId, useRef, useState } from 'react'
 import { search } from './api'
-import { t } from './i18n'
+import { lrec, t } from './i18n'
 import type { SearchKind, SearchResult } from './api'
 
 /**
@@ -19,8 +19,8 @@ import type { SearchKind, SearchResult } from './api'
 export const MIN_QUERY = 2
 const LIMIT = 7
 const DEBOUNCE_MS = 250
-const KIND_LABEL: Record<SearchKind, string> = { rite: 'Обряд', hero: 'Герой', work: 'Произведение', yurt: 'Элемент юрты' }
-const GROUP_LABEL: Record<SearchKind, string> = { rite: 'Обряды', hero: 'Герои', work: 'Произведения', yurt: 'Юрта' }
+const KIND_LABEL: Record<SearchKind, string> = lrec('kind', { rite: 'Обряд', hero: 'Герой', work: 'Произведение', yurt: 'Элемент юрты' })
+const GROUP_LABEL: Record<SearchKind, string> = lrec('search.group', { rite: 'Обряды', hero: 'Герои', work: 'Произведения', yurt: 'Юрта' })
 const KINDS: SearchKind[] = ['rite', 'hero', 'work', 'yurt']
 
 const SearchIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
@@ -95,7 +95,7 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
   const optionId = (i: number) => `${listId}-opt-${i}`
 
   return <div ref={box} className={mobileOpen ? 'header-search open' : 'header-search'}>
-    <button type="button" className="search-toggle" onClick={() => setMobileOpen(true)} aria-label="Открыть поиск"><SearchIcon /></button>
+    <button type="button" className="search-toggle" onClick={() => setMobileOpen(true)} aria-label={t('search.s1', "Открыть поиск")}><SearchIcon /></button>
     <div className={showList ? 'search-field with-list' : 'search-field'}>
       <SearchIcon />
       <input ref={input} type="text" value={value} autoComplete="off" spellCheck={false}
@@ -104,22 +104,22 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
         placeholder={t('search.placeholder', 'Поиск по музею')} aria-label={t('search.placeholder', 'Поиск по музею')}
         role="combobox" aria-expanded={showList} aria-controls={listId} aria-autocomplete="list"
         aria-activedescendant={showList && active >= 0 ? optionId(active) : undefined} />
-      {value && <button type="button" className="search-clear" onClick={() => { setValue(''); input.current?.focus() }} aria-label="Очистить">×</button>}
-      <button type="button" className="search-close" onClick={() => { setMobileOpen(false); setOpen(false) }} aria-label="Закрыть поиск">←</button>
+      {value && <button type="button" className="search-clear" onClick={() => { setValue(''); input.current?.focus() }} aria-label={t('search.s2', "Очистить")}>×</button>}
+      <button type="button" className="search-close" onClick={() => { setMobileOpen(false); setOpen(false) }} aria-label={t('search.s3', "Закрыть поиск")}>←</button>
 
       {showList && <div className="search-drop">
-        {counts && KINDS.some(k => counts[k] > 0) && <div className="drop-filter" role="group" aria-label="Показать только">
+        {counts && KINDS.some(k => counts[k] > 0) && <div className="drop-filter" role="group" aria-label={t('search.s4', "Показать только")}>
           <button type="button" className={kind === null ? 'on' : ''} aria-pressed={kind === null}
-            onMouseDown={e => e.preventDefault()} onClick={() => setKind(null)}>Все <span>{KINDS.reduce((n, k) => n + counts[k], 0)}</span></button>
+            onMouseDown={e => e.preventDefault()} onClick={() => setKind(null)}>{t('search.s5', "Все")}{' '}<span>{KINDS.reduce((n, k) => n + counts[k], 0)}</span></button>
           {KINDS.filter(k => counts[k] > 0).map(k => <button type="button" key={k} className={`k-${k}${kind === k ? ' on' : ''}`} aria-pressed={kind === k}
             onMouseDown={e => e.preventDefault()} onClick={() => setKind(kind === k ? null : k)}><i aria-hidden="true" />{GROUP_LABEL[k]} <span>{counts[k]}</span></button>)}
         </div>}
         {state.status === 'loading' && <p className="drop-note" role="status">{t('search.loading', 'Ищем…')}</p>}
-        {state.status === 'error' && <p className="drop-note" role="alert">Поиск сейчас недоступен</p>}
+        {state.status === 'error' && <p className="drop-note" role="alert">{t('search.s6', "Поиск сейчас недоступен")}</p>}
         {state.status === 'ready' && results.length === 0 && <p className="drop-note" role="status">{t('search.empty', 'Ничего не найдено. Попробуйте начало слова или другое слово.')}</p>}
         {state.status === 'ready' && state.corrected && results.length > 0 &&
-          <p className="drop-note corrected" role="status">Показаны результаты для «<b>{state.corrected}</b>»</p>}
-        <ul id={listId} role="listbox" aria-label="Найденные материалы">
+          <p className="drop-note corrected" role="status">{t('search.s7', "Показаны результаты для «")}<b>{state.corrected}</b>»</p>}
+        <ul id={listId} role="listbox" aria-label={t('search.s8', "Найденные материалы")}>
           {results.map((r, i) => <Fragment key={`${r.kind}-${r.id ?? r.key}`}>
             {(i === 0 || results[i - 1].kind !== r.kind) && <li role="presentation" className="drop-group">{GROUP_LABEL[r.kind]}
               {state.status === 'ready' && state.counts[r.kind] > 0 && <span>{state.counts[r.kind]}</span>}</li>}
@@ -135,7 +135,7 @@ export function HeaderSearch({ onOpen }: { onOpen: (r: SearchResult) => void }) 
           </li></Fragment>)}
         </ul>
         {state.status === 'ready' && state.total > results.length &&
-          <p className="drop-note more">Показаны первые {results.length} — уточните запрос, чтобы найти остальное</p>}
+          <p className="drop-note more">{t('search.s9', "Показаны первые")}{' '}{results.length}{' '}{t('search.s10', "— уточните запрос, чтобы найти остальное")}</p>}
       </div>}
     </div>
   </div>

@@ -8,7 +8,7 @@ import { canEditContent, fetchMe, isAdmin, logout, postVisit } from './api'
 import { Rating } from './Rating'
 import { RewardToasts, emitReward, trackView } from './Rewards'
 import { Admin } from './Admin'
-import { initLanguages, t, useI18n } from './i18n'
+import { initLanguages, t, tf, useI18n } from './i18n'
 import { Editor } from './Editor'
 import { Quizzes } from './Quizzes'
 import { Cabinet } from './Cabinet'
@@ -25,7 +25,7 @@ const Arrow = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h1
 const Eye = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
 
 function Logo({ onClick }: { onClick: () => void }) {
-  return <button className="logo" onClick={onClick} aria-label="На главную"><span className="logo-mark">М</span><span><b>MURAS</b><small>INTERACTIVE</small></span></button>
+  return <button className="logo" onClick={onClick} aria-label={t('app.s1', "На главную")}><span className="logo-mark">{t('app.s2', "М")}</span><span><b>MURAS</b><small>INTERACTIVE</small></span></button>
 }
 
 /** Разделы меню; подписи - через t(), чтобы их можно было перевести словарём (FR-8.1). */
@@ -129,15 +129,15 @@ function Home({ go }: { go: (p: Page) => void }) {
   return <main>
     <section className="hero" style={{backgroundImage:`linear-gradient(90deg,rgba(25,17,14,.76),rgba(25,17,14,.1)),url(${photos.hero})`}}>
       <div className="hero-copy"><p className="kicker light">{t('home.kicker', 'ЦИФРОВОЙ МУЗЕЙ КЫРГЫЗСТАНА')}</p><h1>{t('home.title', 'Открой наследие')}<br/><i>{t('home.titleAccent', 'Кыргызстана')}</i></h1><p className="lead">{t('home.lead', 'Исследуйте устройство юрты, древние обряды и живые традиции народа через современный интерактивный музей.')}</p><div className="actions"><Button onClick={() => go('yurt')}>{t('home.toYurt', 'Исследовать юрту')}</Button><Button secondary onClick={() => go('traditions')}>{t('home.toTraditions', 'Узнать о традициях')}</Button></div></div>
-      <div className="hero-note"><span>01</span><p>Живое наследие<br/>в цифровом пространстве</p></div>
+      <div className="hero-note"><span>01</span><p>{t('app.s3', "Живое наследие")}<br/>{t('app.s4', "в цифровом пространстве")}</p></div>
     </section>
-    <section className="intro"><p className="kicker">НАЧНИТЕ ЗНАКОМСТВО</p><div className="section-head"><h2>История, которую можно<br/><i>почувствовать</i></h2><p>Каждая деталь — от изгиба уука до узора шырдака — хранит знания поколений.</p></div>
+    <section className="intro"><p className="kicker">{t('app.s5', "НАЧНИТЕ ЗНАКОМСТВО")}</p><div className="section-head"><h2>{t('app.s6', "История, которую можно")}<br/><i>{t('app.s7', "почувствовать")}</i></h2><p>{t('app.s8', "Каждая деталь — от изгиба уука до узора шырдака — хранит знания поколений.")}</p></div>
       <div className="feature-grid">
-        <article className="feature large" onClick={() => go('yurt')}><img src={photos.valley} alt="Каркас кыргызской юрты в горах"/><div><span>ИНТЕРАКТИВНАЯ ЭКСПОЗИЦИЯ</span><h3>Внутри кыргызской юрты</h3><p>Разберите традиционное жилище на элементы и узнайте смысл каждого.</p><Button>Открыть экспозицию</Button></div></article>
-        <article className="feature burgundy" onClick={() => go('traditions')}><span>КУЛЬТУРНЫЙ АРХИВ</span><div className="ornament">✦</div><h3>Традиции,<br/>объединяющие<br/>поколения</h3><p>Обряды рождения, взросления, семьи и гостеприимства.</p><button className="round"><Arrow/></button></article>
+        <article className="feature large" onClick={() => go('yurt')}><img src={photos.valley} alt={t('app.s9', "Каркас кыргызской юрты в горах")}/><div><span>{t('app.s10', "ИНТЕРАКТИВНАЯ ЭКСПОЗИЦИЯ")}</span><h3>{t('app.s11', "Внутри кыргызской юрты")}</h3><p>{t('app.s12', "Разберите традиционное жилище на элементы и узнайте смысл каждого.")}</p><Button>{t('app.s13', "Открыть экспозицию")}</Button></div></article>
+        <article className="feature burgundy" onClick={() => go('traditions')}><span>{t('app.s14', "КУЛЬТУРНЫЙ АРХИВ")}</span><div className="ornament">✦</div><h3>{t('app.s15', "Традиции,")}<br/>{t('app.s16', "объединяющие")}<br/>{t('app.s17', "поколения")}</h3><p>{t('app.s18', "Обряды рождения, взросления, семьи и гостеприимства.")}</p><button className="round"><Arrow/></button></article>
       </div>
     </section>
-    <section className="quote"><span>МУРАС</span><blockquote>«Наследие живёт,<br/>пока о нём <i>помнят</i>»</blockquote><p>Сохраняем знания прошлого, чтобы передать их будущему.</p></section>
+    <section className="quote"><span>{t('app.s19', "МУРАС")}</span><blockquote>{t('app.s20', "«Наследие живёт,")}<br/>{t('app.s21', "пока о нём")}{' '}<i>{t('app.s22', "помнят")}</i>»</blockquote><p>{t('app.s23', "Сохраняем знания прошлого, чтобы передать их будущему.")}</p></section>
   </main>
 }
 
@@ -146,7 +146,7 @@ function Lens({ k, className = 'lens' }: { k: PartKey; className?: string }) {
   const pos = (v: number) => Math.min(1, Math.max(0, (v * z - .5) / (z - 1)))
   const px = pos(part.x), py = pos(part.y)
   const mx = (part.x * z - px * (z - 1)) * 100, my = (part.y * z - py * (z - 1)) * 100
-  return <div className={className} role="img" aria-label={`Фрагмент юрты: ${part.name}`}
+  return <div className={className} role="img" aria-label={tf('app.s24', "Фрагмент юрты: {0}", part.name)}
     style={{ backgroundImage: `url(${YURT_IMAGE})`, backgroundSize: `${z * 100}% auto`, backgroundPosition: `${px * 100}% ${py * 100}%` }}>
     <i style={{ left: `${mx}%`, top: `${my}%` }}/>
   </div>
@@ -165,18 +165,18 @@ function Yurt({ go, selected, setSelected, user, openNode }: { go: (p: Page) => 
   useEffect(() => { trackView(user, 'YURT_PART', selected) }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
   const step = (d: number) => pick(partKeys[(idx + d + partKeys.length) % partKeys.length])
   const byName = (name: string) => partKeys.find(k => yurtParts[k].name === name)
-  return <main className="museum-page"><div className="page-title"><p className="kicker">ИНТЕРАКТИВНАЯ ЭКСПОЗИЦИЯ · 01</p><h1>Внутри кыргызской <i>юрты</i></h1><p>Нажмите на точку на схеме, чтобы узнать устройство, назначение и смысл каждого элемента боз үй.</p></div>
-    <section className="exhibit"><div className="exhibit-stage"><div className="stage-top"><span>БОЗ ҮЙ · ОСНОВНЫЕ ЭЛЕМЕНТЫ КОНСТРУКЦИИ</span><span>{String(part.no).padStart(2, '0')} / {partKeys.length}</span></div>
+  return <main className="museum-page"><div className="page-title"><p className="kicker">{t('app.s25', "ИНТЕРАКТИВНАЯ ЭКСПОЗИЦИЯ · 01")}</p><h1>{t('app.s26', "Внутри кыргызской")}{' '}<i>{t('app.s27', "юрты")}</i></h1><p>{t('app.s28', "Нажмите на точку на схеме, чтобы узнать устройство, назначение и смысл каждого элемента боз үй.")}</p></div>
+    <section className="exhibit"><div className="exhibit-stage"><div className="stage-top"><span>{t('app.s29', "БОЗ ҮЙ · ОСНОВНЫЕ ЭЛЕМЕНТЫ КОНСТРУКЦИИ")}</span><span>{String(part.no).padStart(2, '0')} / {partKeys.length}</span></div>
       <AuthenticYurtDiagram selected={selected} select={pick}/>
-      <div className="size-strip"><p>{yurtSize.title}</p><div><span>Высота в центре<b>{yurtSize.height}</b></span><span>Высота кереге<b>{yurtSize.keregeHeight}</b></span><span>Диаметр<b>{yurtSize.diameter}</b></span></div></div>
+      <div className="size-strip"><p>{yurtSize.title}</p><div><span>{t('app.s30', "Высота в центре")}<b>{yurtSize.height}</b></span><span>{t('app.s31', "Высота кереге")}<b>{yurtSize.keregeHeight}</b></span><span>{t('app.s32', "Диаметр")}<b>{yurtSize.diameter}</b></span></div></div>
     </div>
-      <aside className={panelOpen ? 'info-panel' : 'info-panel panel-closed'} aria-live="polite"><button className="close" onClick={() => setPanelOpen(false)} aria-label="Закрыть">×</button>{panelOpen ? <>
+      <aside className={panelOpen ? 'info-panel' : 'info-panel panel-closed'} aria-live="polite"><button className="close" onClick={() => setPanelOpen(false)} aria-label={t('app.s33', "Закрыть")}>×</button>{panelOpen ? <>
         <p className="kicker"><span className="no">{String(part.no).padStart(2, '0')}</span>{part.group} · {part.eyebrow}</p><h2>{part.name}</h2><p className="info-intro">{linker.text(part.description)}</p>
         <Lens k={selected}/>
-        <dl><div><dt>Назначение</dt><dd>{linker.text(part.purpose)}</dd></div><div><dt>Культурное значение</dt><dd>{linker.text(part.meaning)}</dd></div><div><dt>Связанные элементы</dt><dd className="chips">{part.related.map(r => { const k = byName(r); return k ? <button key={r} onClick={() => pick(k)}>{r}</button> : <span key={r}>{r}</span> })}</dd></div></dl>
+        <dl><div><dt>{t('app.s34', "Назначение")}</dt><dd>{linker.text(part.purpose)}</dd></div><div><dt>{t('app.s35', "Культурное значение")}</dt><dd>{linker.text(part.meaning)}</dd></div><div><dt>{t('app.s36', "Связанные элементы")}</dt><dd className="chips">{part.related.map(r => { const k = byName(r); return k ? <button key={r} onClick={() => pick(k)}>{r}</button> : <span key={r}>{r}</span> })}</dd></div></dl>
         <SeeAlso linker={linker} compact />
-        <div className="panel-nav"><button onClick={() => step(-1)} aria-label="Предыдущий элемент">←</button><Button onClick={() => go('yurt-detail')}>Подробнее об элементе</Button><button onClick={() => step(1)} aria-label="Следующий элемент">→</button></div></>
-        : <button className="reopen-panel" onClick={() => setPanelOpen(true)}>Открыть карточку<br/><b>{part.name}</b></button>}
+        <div className="panel-nav"><button onClick={() => step(-1)} aria-label={t('app.s37', "Предыдущий элемент")}>←</button><Button onClick={() => go('yurt-detail')}>{t('app.s38', "Подробнее об элементе")}</Button><button onClick={() => step(1)} aria-label={t('app.s39', "Следующий элемент")}>→</button></div></>
+        : <button className="reopen-panel" onClick={() => setPanelOpen(true)}>{t('app.s40', "Открыть карточку")}<br/><b>{part.name}</b></button>}
       </aside></section>
   </main>
 }
@@ -184,11 +184,11 @@ function Yurt({ go, selected, setSelected, user, openNode }: { go: (p: Page) => 
 function YurtDetail({ go, selected, openNode }: { go: (p: Page) => void; selected: PartKey; openNode: (n: RelationNode) => void }) {
   const part = yurtParts[selected]
   const linker = new Linker(useRelationLinks('yurt', selected) ?? [], openNode)
-  return <main className="article-page"><button className="back" onClick={() => go('yurt')}>← Вернуться к экспозиции</button>
-    <div className="article-hero detail-hero"><Lens k={selected} className="lens hero-lens"/><div><p className="kicker">ЭЛЕМЕНТ ЮРТЫ · {part.group.toUpperCase()}</p><h1>{part.name}</h1><p>{part.eyebrow}</p></div></div>
-    <div className="article-body"><aside><b>КЫРГЫЗСКОЕ НАЗВАНИЕ</b><strong>{part.name}</strong><span>Элемент {part.no} из {partKeys.length}</span></aside>
-      <article><p className="big">{linker.text(part.description)}</p><h2>Назначение и устройство</h2><p>{linker.text(part.purpose)}</p><h2>Культурное значение</h2><p>{linker.text(part.meaning)}</p>
-        <div className="materials"><b>Связанные элементы</b>{part.related.map(r => <span key={r}>{r}</span>)}</div>
+  return <main className="article-page"><button className="back" onClick={() => go('yurt')}>{t('app.s41', "← Вернуться к экспозиции")}</button>
+    <div className="article-hero detail-hero"><Lens k={selected} className="lens hero-lens"/><div><p className="kicker">{t('app.s42', "ЭЛЕМЕНТ ЮРТЫ ·")}{' '}{part.group.toUpperCase()}</p><h1>{part.name}</h1><p>{part.eyebrow}</p></div></div>
+    <div className="article-body"><aside><b>{t('app.s43', "КЫРГЫЗСКОЕ НАЗВАНИЕ")}</b><strong>{part.name}</strong><span>{t('app.s44', "Элемент")}{' '}{part.no}{' '}{t('app.s45', "из")}{' '}{partKeys.length}</span></aside>
+      <article><p className="big">{linker.text(part.description)}</p><h2>{t('app.s46', "Назначение и устройство")}</h2><p>{linker.text(part.purpose)}</p><h2>{t('app.s35', "Культурное значение")}</h2><p>{linker.text(part.meaning)}</p>
+        <div className="materials"><b>{t('app.s36', "Связанные элементы")}</b>{part.related.map(r => <span key={r}>{r}</span>)}</div>
         <SeeAlso linker={linker} /></article></div></main>
 }
 

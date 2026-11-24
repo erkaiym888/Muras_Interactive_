@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import { useEffect, useState } from 'react'
 import './features.css'
 import { addFavorite, fetchFavoriteStatus, removeFavorite } from './api'
@@ -38,8 +39,8 @@ export function FavoriteButton({ user, itemType, itemId }: { user: User | null; 
 
   return <div className="fav-row">
     <button className="fav-btn" aria-pressed={favorite} disabled={busy} onClick={toggle}>
-      <span aria-hidden="true">{favorite ? '★' : '☆'}</span>{favorite ? 'В избранном' : 'В избранное'}
+      <span aria-hidden="true">{favorite ? '★' : '☆'}</span>{favorite ? t('favorite.s1', "В избранном") : t('favorite.s2', "В избранное")}
     </button>
-    {failed && <span role="alert" style={{ marginLeft: 12, color: '#a42b2b', fontSize: 13 }}>Не удалось сохранить, попробуйте ещё раз</span>}
+    {failed && <span role="alert" style={{ marginLeft: 12, color: '#a42b2b', fontSize: 13 }}>{t('favorite.s3', "Не удалось сохранить, попробуйте ещё раз")}</span>}
   </div>
 }

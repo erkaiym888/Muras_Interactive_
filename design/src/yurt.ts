@@ -1,5 +1,8 @@
 // Данные интерактивной схемы юрты (FR-1.1, FR-1.2).
+// Тексты переводятся через словари: ключи yurt.<элемент>.<поле> (FR-8.2).
 // Координаты x/y — позиция точки на изображении /yurt-main.webp в долях (0–1).
+
+import { lrec } from './i18n'
 
 export const YURT_IMAGE = '/yurt-main.webp'
 export const YURT_IMAGE_RATIO = 1462 / 2000
@@ -21,7 +24,7 @@ export interface YurtPart {
 
 const p = (x: number, y: number) => ({ x: x / 1000, y: y / 731 })
 
-export const yurtParts = {
+export const yurtParts = lrec('yurt', {
   chamgarak: {
     no: 1, name: 'Чамгарак', group: 'Каркас', eyebrow: 'Перекрестие түндүка',
     description: 'Изогнутые деревянные дуги, которые перекрещиваются внутри обода түндүка и образуют его выпуклый купол.',
@@ -142,14 +145,14 @@ export const yurtParts = {
     related: ['Уук', 'Тизгич'],
     ...p(747, 268),
   },
-} satisfies Record<string, YurtPart>
+} satisfies Record<string, YurtPart>)
 
 export type PartKey = keyof typeof yurtParts
 export const partKeys = Object.keys(yurtParts) as PartKey[]
 
-export const yurtSize = {
+export const yurtSize = lrec('yurt.size', {
   title: 'Алты канат — юрта из шести секций кереге',
   height: '4–5 м',
   keregeHeight: '2 м',
   diameter: '4,5–8 м',
-}
+})

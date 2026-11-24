@@ -71,6 +71,71 @@ export function t(key: string, ru: string) {
   return state.dict[key] ?? ru
 }
 
+/** Перевод с подстановкой: tf('k', 'Набрано {0} из {1}', a, b). */
+export function tf(key: string, ru: string, ...args: unknown[]) {
+  return t(key, ru).replace(/\{(\d+)\}/g, (_, i) => String(args[Number(i)] ?? ''))
+}
+
+const LOCALES: Record<string, string> = { ru: 'ru-RU', ky: 'ky-KG', en: 'en-GB' }
+/** Локаль для дат и чисел (toLocaleDateString и т. п.) по выбранному языку. */
+export const locale = () => LOCALES[state.lang] ?? state.lang
+
+/**
+ * Системные тексты, которые присылает сервер (названия уровней и значков, строки начисления очков, описания ролей).
+ * Это не редакционный контент, поэтому их перевод лежит в тех же словарях интерфейса под ключом «srv:русский текст».
+ */
+const SERVER_PATTERNS: [RegExp, string][] = [
+  [/^Серия из (\d+) верных ответов подряд$/, 'srv.streak'],
+  [/^Бонус за завершение уже получен (\d+) раза сегодня$/, 'srv.completeLimit'],
+  [/^Значок «(.+)»$/, 'srv.badge'],
+]
+export function ts(text: string): string
+export function ts(text: string | null | undefined): string | null | undefined
+export function ts(text: string | null | undefined) {
+  if (!text || state.lang === DEFAULT) return text
+  const direct = state.dict[`srv:${text}`]
+  if (direct) return direct
+  for (const [re, key] of SERVER_PATTERNS) {
+    const m = text.match(re)
+    if (m && state.dict[key]) return state.dict[key].replace('{0}', key === 'srv.badge' ? ts(m[1]) : m[1])
+  }
+  return text
+}
+
+/**
+ * Слово после числа: tp('plural.points', n, 'очко', 'очка', 'очков').
+ * Русский - по своим трём формам; в словарях других языков ключи `.one` и `.other` (правила Intl.PluralRules).
+ */
+export function tp(key: string, n: number, one: string, few: string, many: string) {
+  if (state.lang !== DEFAULT) {
+    const form = new Intl.PluralRules(locale()).select(n)
+    const word = state.dict[`${key}.${form}`] ?? state.dict[`${key}.other`]
+    if (word) return word
+  }
+  const last = Math.abs(n) % 10, tail = Math.abs(n) % 100
+  if (last === 1 && tail !== 11) return one
+  if (last >= 2 && last <= 4 && (tail < 12 || tail > 14)) return few
+  return many
+}
+
+/**
+ * Справочник подписей, который переводится при каждом обращении: lrec('role', { USER: 'Пользователь' })[r].
+ * Нужен для констант уровня модуля - обычный объект вычислился бы один раз и не сменил бы язык.
+ * Вложенные массивы и объекты переводятся по пути ключей: lrec('auth.titles', { login: ['А', 'Б'] }).login[1].
+ * Поле value (значение для сервера, а не подпись) не переводится.
+ */
+export function lrec<T extends object>(prefix: string, source: T): T {
+  return new Proxy(source, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver)
+      if (typeof prop !== 'string') return value
+      if (typeof value === 'string') return prop === 'value' ? value : t(`${prefix}.${prop}`, value)
+      if (value && typeof value === 'object') return lrec(`${prefix}.${prop}`, value)
+      return value
+    },
+  })
+}
+
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l) } }
 const snapshot = () => state
 

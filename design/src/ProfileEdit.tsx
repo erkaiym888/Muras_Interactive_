@@ -1,3 +1,4 @@
+import { t, tf } from './i18n'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError, deleteAvatar, updateDisplayName, updateEmail, uploadAvatar } from './api'
@@ -68,14 +69,14 @@ export function ProfileEdit({ user, onUser, onClose }: { user: User; onUser: (u:
   const pickAvatar = async (f: File | undefined) => {
     if (!f) return
     setDone(''); setErrors({})
-    if (!f.type.startsWith('image/')) { setErrors({ avatar: 'Выберите картинку: JPG, PNG или WebP' }); return }
-    if (f.size > MAX_SOURCE_MB * 1024 * 1024) { setErrors({ avatar: `Файл больше ${MAX_SOURCE_MB} МБ` }); return }
+    if (!f.type.startsWith('image/')) { setErrors({ avatar: t('profileEdit.s1', "Выберите картинку: JPG, PNG или WebP") }); return }
+    if (f.size > MAX_SOURCE_MB * 1024 * 1024) { setErrors({ avatar: tf('profileEdit.s2', "Файл больше {0} МБ", MAX_SOURCE_MB) }); return }
     setBusy('avatar')
     try {
       const dataUrl = await toAvatarDataUrl(f)
-      ok(await uploadAvatar(dataUrl), 'Аватар обновлён')
+      ok(await uploadAvatar(dataUrl), t('profileEdit.s3', "Аватар обновлён"))
     } catch (e) {
-      setErrors({ avatar: fieldError(e, 'avatar', 'Не удалось загрузить картинку') })
+      setErrors({ avatar: fieldError(e, 'avatar', t('profileEdit.s4', "Не удалось загрузить картинку")) })
     } finally {
       setBusy('')
       if (file.current) file.current.value = ''
@@ -84,35 +85,35 @@ export function ProfileEdit({ user, onUser, onClose }: { user: User; onUser: (u:
 
   const removeAvatar = async () => {
     setBusy('avatar'); setDone('')
-    try { ok(await deleteAvatar(), 'Аватар убран') }
-    catch (e) { setErrors({ avatar: fieldError(e, 'avatar', 'Не удалось убрать аватар') }) }
+    try { ok(await deleteAvatar(), t('profileEdit.s5', "Аватар убран")) }
+    catch (e) { setErrors({ avatar: fieldError(e, 'avatar', t('profileEdit.s6', "Не удалось убрать аватар")) }) }
     finally { setBusy('') }
   }
 
   const saveName = async (e: FormEvent) => {
     e.preventDefault(); setDone('')
     const value = name.trim()
-    if (value.length < 2 || value.length > 40) { setErrors({ displayName: 'Никнейм - от 2 до 40 символов' }); return }
+    if (value.length < 2 || value.length > 40) { setErrors({ displayName: t('profileEdit.s7', "Никнейм - от 2 до 40 символов") }); return }
     setBusy('name')
-    try { ok(await updateDisplayName(value), 'Никнейм сохранён') }
-    catch (err) { setErrors({ displayName: fieldError(err, 'displayName', 'Не удалось сохранить никнейм') }) }
+    try { ok(await updateDisplayName(value), t('profileEdit.s8', "Никнейм сохранён")) }
+    catch (err) { setErrors({ displayName: fieldError(err, 'displayName', t('profileEdit.s9', "Не удалось сохранить никнейм")) }) }
     finally { setBusy('') }
   }
 
   const saveEmail = async (e: FormEvent) => {
     e.preventDefault(); setDone('')
     const next: Record<string, string> = {}
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = 'Проверьте адрес почты'
-    if (!password) next.currentPassword = 'Введите текущий пароль'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = t('profileEdit.s10', "Проверьте адрес почты")
+    if (!password) next.currentPassword = t('profileEdit.s11', "Введите текущий пароль")
     if (Object.keys(next).length) { setErrors(next); return }
     setBusy('email')
     try {
       const u = await updateEmail(email.trim(), password)
       setPassword('')
-      ok(u, 'Почта изменена. Входите теперь с новым адресом')
+      ok(u, t('profileEdit.s12', "Почта изменена. Входите теперь с новым адресом"))
     } catch (err) {
       const fe = err instanceof ApiError ? err.fieldErrors ?? {} : {}
-      setErrors(Object.keys(fe).length ? fe : { email: fieldError(err, 'email', 'Не удалось изменить почту') })
+      setErrors(Object.keys(fe).length ? fe : { email: fieldError(err, 'email', t('profileEdit.s13', "Не удалось изменить почту")) })
     } finally { setBusy('') }
   }
 
@@ -121,21 +122,21 @@ export function ProfileEdit({ user, onUser, onClose }: { user: User; onUser: (u:
   return <div className="pe-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
     <div className="pe-dialog" role="dialog" aria-modal="true" aria-labelledby="pe-title" ref={dialog}>
       <div className="pe-head">
-        <h2 id="pe-title">Редактировать профиль</h2>
-        <button className="pe-close" onClick={onClose} aria-label="Закрыть">×</button>
+        <h2 id="pe-title">{t('profileEdit.s14', "Редактировать профиль")}</h2>
+        <button className="pe-close" onClick={onClose} aria-label={t('profileEdit.s15', "Закрыть")}>×</button>
       </div>
       {done && <p className="pe-done" role="status">{done}</p>}
 
       <section className="pe-section pe-avatar">
         <Avatar user={user} size="lg" />
         <div>
-          <h3>Аватар</h3>
-          <p className="pe-hint">Квадратная картинка, обрежем по центру. JPG, PNG или WebP.</p>
+          <h3>{t('profileEdit.s16', "Аватар")}</h3>
+          <p className="pe-hint">{t('profileEdit.s17', "Квадратная картинка, обрежем по центру. JPG, PNG или WebP.")}</p>
           <div className="pe-row">
             <button type="button" className="btn" disabled={busy === 'avatar'} onClick={() => file.current?.click()}>
-              {busy === 'avatar' ? 'Загрузка…' : user.avatarUrl ? 'Сменить фото' : 'Выбрать фото'}
+              {busy === 'avatar' ? t('profileEdit.s18', "Загрузка…") : user.avatarUrl ? t('profileEdit.s19', "Сменить фото") : t('profileEdit.s20', "Выбрать фото")}
             </button>
-            {user.avatarUrl && <button type="button" className="btn ghost" disabled={busy === 'avatar'} onClick={removeAvatar}>Убрать</button>}
+            {user.avatarUrl && <button type="button" className="btn ghost" disabled={busy === 'avatar'} onClick={removeAvatar}>{t('profileEdit.s21', "Убрать")}</button>}
             <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e => pickAvatar(e.target.files?.[0])} />
           </div>
           {errors.avatar && <p className="pe-error" role="alert">{errors.avatar}</p>}
@@ -143,33 +144,33 @@ export function ProfileEdit({ user, onUser, onClose }: { user: User; onUser: (u:
       </section>
 
       <form className="pe-section" onSubmit={saveName} noValidate>
-        <h3>Никнейм</h3>
-        <p className="pe-hint">Так вас видят другие: в рейтинге и меню.</p>
+        <h3>{t('profileEdit.s22', "Никнейм")}</h3>
+        <p className="pe-hint">{t('profileEdit.s23', "Так вас видят другие: в рейтинге и меню.")}</p>
         <div className="pe-row">
-          <input value={name} onChange={e => setName(e.target.value)} maxLength={40} aria-label="Никнейм"
+          <input value={name} onChange={e => setName(e.target.value)} maxLength={40} aria-label={t('profileEdit.s22', "Никнейм")}
             aria-invalid={!!errors.displayName} aria-describedby={errors.displayName ? 'pe-name-err' : undefined} />
-          <button className="btn" disabled={busy === 'name' || name.trim() === user.displayName}>{busy === 'name' ? 'Сохранение…' : 'Сохранить'}</button>
+          <button className="btn" disabled={busy === 'name' || name.trim() === user.displayName}>{busy === 'name' ? t('profileEdit.s24', "Сохранение…") : t('profileEdit.s25', "Сохранить")}</button>
         </div>
         {errors.displayName && <p id="pe-name-err" className="pe-error" role="alert">{errors.displayName}</p>}
       </form>
 
       <form className="pe-section" onSubmit={saveEmail} noValidate>
-        <h3>Почта</h3>
-        <p className="pe-hint">Новый адрес станет логином. Для подтверждения введите текущий пароль.</p>
-        <label className="pe-field"><span>Новая почта</span>
+        <h3>{t('profileEdit.s26', "Почта")}</h3>
+        <p className="pe-hint">{t('profileEdit.s27', "Новый адрес станет логином. Для подтверждения введите текущий пароль.")}</p>
+        <label className="pe-field"><span>{t('profileEdit.s28', "Новая почта")}</span>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email"
             aria-invalid={!!errors.email} aria-describedby={errors.email ? 'pe-email-err' : undefined} />
         </label>
         {errors.email && <p id="pe-email-err" className="pe-error" role="alert">{errors.email}</p>}
         {emailChanged && <>
-          <label className="pe-field"><span>Текущий пароль</span>
+          <label className="pe-field"><span>{t('profileEdit.s29', "Текущий пароль")}</span>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password"
               aria-invalid={!!errors.currentPassword} aria-describedby={errors.currentPassword ? 'pe-pass-err' : undefined} />
           </label>
           {errors.currentPassword && <p id="pe-pass-err" className="pe-error" role="alert">{errors.currentPassword}</p>}
         </>}
         <div className="pe-row end">
-          <button className="btn" disabled={busy === 'email' || !emailChanged}>{busy === 'email' ? 'Сохранение…' : 'Изменить почту'}</button>
+          <button className="btn" disabled={busy === 'email' || !emailChanged}>{busy === 'email' ? t('profileEdit.s24', "Сохранение…") : t('profileEdit.s30', "Изменить почту")}</button>
         </div>
       </form>
     </div>
