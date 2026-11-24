@@ -10,7 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Правила начисления очков (Приложение Б.1). Значения по умолчанию из ТЗ записываются в таблицу
+ * Правила начисления очков (Приложение Б.1): викторины, изучение материалов, ежедневный вход. Значения по умолчанию из ТЗ записываются в таблицу
  * point_rule при первом запуске; дальше они читаются из базы, и администратор может их менять.
  */
 @Service
@@ -25,6 +25,10 @@ public class PointRules implements CommandLineRunner {
     public static final String RESULT_80 = "QUIZ_RESULT_80";
     public static final String RESULT_100 = "QUIZ_RESULT_100";
     public static final String FIRST_PASS = "QUIZ_FIRST_PASS";
+    public static final String YURT_ELEMENT_FIRST = "YURT_ELEMENT_FIRST";
+    public static final String CARD_FIRST_READ = "CARD_FIRST_READ";
+    public static final String STUDY_DAILY_LIMIT = "STUDY_DAILY_LIMIT";
+    public static final String DAILY_LOGIN = "DAILY_LOGIN";
 
     /** Значения из ТЗ: код -> {значение, описание}. */
     private static final Map<String, Object[]> DEFAULTS = new LinkedHashMap<>();
@@ -38,6 +42,10 @@ public class PointRules implements CommandLineRunner {
         DEFAULTS.put(RESULT_80, new Object[]{20.0, "Результат 80% и выше (только первое прохождение)"});
         DEFAULTS.put(RESULT_100, new Object[]{50.0, "Результат 100%, заменяет бонус за 80% (только первое прохождение)"});
         DEFAULTS.put(FIRST_PASS, new Object[]{25.0, "Первое прохождение викторины"});
+        DEFAULTS.put(YURT_ELEMENT_FIRST, new Object[]{2.0, "Первое открытие элемента схемы юрты (один раз для каждого элемента)"});
+        DEFAULTS.put(CARD_FIRST_READ, new Object[]{3.0, "Первое прочтение карточки обряда, героя или произведения"});
+        DEFAULTS.put(STUDY_DAILY_LIMIT, new Object[]{30.0, "Не больше стольких очков в сутки за прочтение карточек"});
+        DEFAULTS.put(DAILY_LOGIN, new Object[]{5.0, "Ежедневный вход (один раз в сутки по времени Бишкека)"});
     }
 
     private final PointRuleRepository repository;
