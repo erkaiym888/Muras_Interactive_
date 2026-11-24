@@ -1,7 +1,8 @@
+import { useEffect, useRef, useState } from 'react'
+import { t, useI18n } from './i18n'
 import { FavoriteButton } from './Favorite'
 import type { User } from './api'
 import { trackView } from './Rewards'
-import { useEffect, useState } from 'react'
 import { fetchFolkloreDetail, fetchFolkloreItems, fetchFolkloreTypes } from './api'
 import type { FolkloreDetail as Detail, FolkloreItem, FolkloreKind, FolkloreType } from './api'
 import { Linker, SeeAlso, useRelationLinks } from './Relations'
@@ -27,8 +28,10 @@ function Placeholder({ title }: { title: string }) {
 export function Folklore({ openItem }: { openItem: (ref: FolkloreRef) => void }) {
   const [items, setItems] = useState<FolkloreItem[]>([])
   const [types, setTypes] = useState<FolkloreType[]>([])
-  const [type, setType] = useState(ALL)
+  // Фильтр хранится по id типа: при смене языка название типа меняется, а выбор остаётся (FR-8.2)
+  const [typeId, setTypeId] = useState<number | null>(null)
   const [status, setStatus] = useState<Status>('loading')
+  const { lang } = useI18n()
 
   useEffect(() => {
     let alive = true
@@ -41,13 +44,17 @@ export function Folklore({ openItem }: { openItem: (ref: FolkloreRef) => void })
       })
       .catch(() => alive && setStatus('error'))
     return () => { alive = false }
-  }, [])
+  }, [lang])
 
-  const shown = type === ALL ? items : items.filter(i => i.type === type)
+  const typeName = types.find(x => x.id === typeId)?.name
+  const shown = typeName === undefined ? items : items.filter(i => i.type === typeName)
 
   return <main className="catalog">
-    <div className="page-title"><p className="kicker">ФОЛЬКЛОР · 03</p><h1>Герои и <i>сказания</i></h1><p>Эпос, сказки, легенды и пословицы кыргызского народа: герои и произведения, в которых хранится память о прошлом.</p></div>
-    <div className="filters">{[ALL, ...types.map(t => t.name)].map(t => <button className={type === t ? 'active' : ''} aria-pressed={type === t} onClick={() => setType(t)} key={t}>{t}</button>)}</div>
+    <div className="page-title"><p className="kicker">{t('folklore.kicker', 'ФОЛЬКЛОР · 03')}</p><h1>{t('folklore.title', 'Герои и')} <i>{t('folklore.titleAccent', 'сказания')}</i></h1><p>{t('folklore.lead', 'Эпос, сказки, легенды и пословицы кыргызского народа: герои и произведения, в которых хранится память о прошлом.')}</p></div>
+    <div className="filters">
+      <button className={typeId === null ? 'active' : ''} aria-pressed={typeId === null} onClick={() => setTypeId(null)}>{t('folklore.all', ALL)}</button>
+      {types.map(x => <button className={typeId === x.id ? 'active' : ''} aria-pressed={typeId === x.id} onClick={() => setTypeId(x.id)} key={x.id}>{x.name}</button>)}
+    </div>
     {status === 'loading' && <p role="status" style={note}>Загрузка…</p>}
     {status === 'error' && <p role="alert" style={note}>Не удалось загрузить раздел. Проверьте, что сервер запущен.</p>}
     {status === 'ready' && shown.length === 0 && <p style={note}>В этой категории пока нет материалов.</p>}
@@ -73,20 +80,23 @@ export function FolkloreDetail({ go, item, openNode, user }: {
   const [status, setStatus] = useState<Status>('loading')
   const kind = item?.kind
   const id = item?.id
+  const { lang } = useI18n()
+  const loaded = useRef('')
   const links = useRelationLinks(kind ?? 'hero', id ?? null)
 
   useEffect(() => {
     if (kind === undefined || id === undefined) { setStatus('error'); return }
     let alive = true
-    setStatus('loading')
-    window.scrollTo({ top: 0 })
+    // FR-8.2: при смене языка остаёмся на том же месте страницы, наверх - только при переходе к другой карточке
+    if (loaded.current !== `${kind}-${id}`) { setStatus('loading'); window.scrollTo({ top: 0 }) }
+    loaded.current = `${kind}-${id}`
     fetchFolkloreDetail(kind, id)
       .then(d => { if (alive) { setDetail(d); setStatus('ready'); trackView(user, kind === 'hero' ? 'HERO' : 'WORK', id) } })
       .catch(() => alive && setStatus('error'))
     return () => { alive = false }
-  }, [kind, id])
+  }, [kind, id, lang])
 
-  const back = <button className="back" onClick={() => go('folklore')}>← Назад в каталог</button>
+  const back = <button className="back" onClick={() => go('folklore')}>← {t('common.backToCatalog', 'Назад в каталог')}</button>
 
   if (status !== 'ready' || !detail) {
     return <main className="trad-detail">{back}

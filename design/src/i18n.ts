@@ -15,8 +15,18 @@ const DEFAULT = 'ru'
 
 type State = { lang: string; languages: Language[]; dict: Record<string, string> }
 
+/** FR-8.2: язык из ссылки (?lang=ky) важнее сохранённого - чтобы ссылкой можно было поделиться. */
 function readStored() {
+  const fromUrl = new URLSearchParams(window.location.search).get('lang')
+  if (fromUrl) return fromUrl.toLowerCase()
   try { return localStorage.getItem(STORAGE_KEY) || DEFAULT } catch { return DEFAULT }
+}
+
+/** Язык в адресной строке: ?lang=ky; для основного языка параметр убираем. Страница не перезагружается. */
+function writeUrl(code: string) {
+  const url = new URL(window.location.href)
+  if (code === DEFAULT) url.searchParams.delete('lang'); else url.searchParams.set('lang', code)
+  window.history.replaceState(window.history.state, '', url)
 }
 
 let state: State = { lang: readStored(), languages: [{ code: DEFAULT, nativeName: 'Русский' }], dict: {} }
@@ -39,6 +49,7 @@ export async function setLang(code: string) {
   const dict = await loadDictionary(code)
   try { localStorage.setItem(STORAGE_KEY, code) } catch { /* приватный режим */ }
   document.documentElement.lang = code
+  writeUrl(code)
   emit({ lang: code, dict })
 }
 

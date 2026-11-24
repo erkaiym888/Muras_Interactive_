@@ -408,3 +408,10 @@ footer>div:first-child>p{margin:18px 0 0;line-height:1.6}
 .see-also small{color:#9a8d82;font-size:12px}
 .see-also.compact{margin:6px 0 16px;padding-top:14px;border-top:1px solid #8e5a5e;font-size:12px;color:#e1d2cc}
 .see-also.compact>span:first-child{text-transform:uppercase;letter-spacing:.18em;font-size:9px;color:var(--sand);display:block;margin-bottom:4px}
+/* FR-8.2: переключатель языка в шапке */
+.header-right{display:flex;align-items:center;gap:18px}
+.lang-switch.compact{margin:0;gap:2px;border:1px solid #d9cdbd;border-radius:999px;padding:2px}
+.lang-switch.compact button{border:0;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:600;letter-spacing:.08em;color:#7d6f65;background:transparent}
+.lang-switch.compact button.active{background:var(--wine);color:#fff}
+.lang-switch.compact button:hover:not(.active){background:#efe6d8}
+@media(max-width:700px){.header-right{gap:10px}.lang-switch.compact button{padding:5px 8px}}
