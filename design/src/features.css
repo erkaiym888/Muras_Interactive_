@@ -252,3 +252,13 @@
 .rk-gap{text-align:center;color:#b0a597;margin:6px 0}
 .rk-total,.rk-join{text-align:center;color:#8a7d73;font-size:13px;margin-top:18px}
 @media(max-width:600px){.rk-podium{gap:8px}.rk-podium li b{font-size:13px}.rk-list li{grid-template-columns:36px 38px 1fr auto;gap:10px;padding:10px 12px}}
+
+/* Личный кабинет: сверху обложка с фотографией с главной страницы, ниже - обычный фон */
+.cab-cover{height:300px;background-color:#d9cdbd;background-size:cover;background-position:center 40%}
+.cab-page>main.catalog{position:relative;margin-top:-170px;padding-top:0}
+.cab-page .cab-grid{margin-top:0}
+.cab-page .cab-card,.cab-page .quiz-gate{border-radius:14px;box-shadow:0 10px 30px #5b39201a}
+.cab-page .cab-card .btn,.cab-page .quiz-gate .btn,.cab-page .cab-x{border-radius:8px}
+.cab-page .cab-note{border-radius:0 8px 8px 0}
+.cab-page>main>p[role]{background:var(--white);border-radius:14px;padding:28px;box-shadow:0 10px 30px #5b39201a}
+@media(max-width:900px){.cab-cover{height:220px}.cab-page>main.catalog{margin-top:-120px}}

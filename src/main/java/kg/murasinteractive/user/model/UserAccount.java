@@ -33,6 +33,10 @@ public class UserAccount {
     @Column(name = "registered_at", nullable = false)
     private Instant registeredAt = Instant.now();
 
+    /** Заблокирован администратором (FR-7.3): войти нельзя, активная сессия закрывается. */
+    @Column(name = "is_blocked", nullable = false, columnDefinition = "boolean default false")
+    private boolean blocked = false;
+
     public Long getUserId() { return userId; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
@@ -45,4 +49,6 @@ public class UserAccount {
     public int getTotalPoints() { return totalPoints; }
     public void setTotalPoints(int totalPoints) { this.totalPoints = totalPoints; }
     public Instant getRegisteredAt() { return registeredAt; }
+    public boolean isBlocked() { return blocked; }
+    public void setBlocked(boolean blocked) { this.blocked = blocked; }
 }

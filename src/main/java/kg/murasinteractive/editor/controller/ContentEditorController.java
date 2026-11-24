@@ -5,6 +5,7 @@ import kg.murasinteractive.editor.dto.CategoryForm;
 import kg.murasinteractive.editor.dto.CategoryRow;
 import kg.murasinteractive.editor.dto.RiteForm;
 import kg.murasinteractive.editor.dto.RiteRow;
+import kg.murasinteractive.editor.dto.StatusRequest;
 import kg.murasinteractive.editor.service.ContentEditorService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import java.util.List;
  *  GET    /api/editor/rites/{id}            - обряд для формы редактирования
  *  POST   /api/editor/rites                 - добавить обряд
  *  PUT    /api/editor/rites/{id}            - изменить обряд
+ *  PATCH  /api/editor/rites/{id}/status     - сменить статус (FR-7.2)
  *  DELETE /api/editor/rites/{id}            - удалить обряд
  *  GET    /api/editor/rite-categories       - категории с числом обрядов
  *  POST   /api/editor/rite-categories       - добавить категорию
@@ -52,6 +54,12 @@ public class ContentEditorController {
     @PutMapping("/rites/{riteId}")
     public RiteForm updateRite(@PathVariable Long riteId, @Valid @RequestBody RiteForm form) {
         return editorService.updateRite(riteId, form);
+    }
+
+    /** Быстрая смена статуса (FR-7.2). */
+    @PatchMapping("/rites/{riteId}/status")
+    public RiteRow riteStatus(@PathVariable Long riteId, @Valid @RequestBody StatusRequest request) {
+        return editorService.setRiteStatus(riteId, request.status());
     }
 
     @DeleteMapping("/rites/{riteId}")

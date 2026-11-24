@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { photos } from './data'
 import './features.css'
 import { canEditContent, fetchAwards, fetchCabinet, fetchProgress, removeFavorite } from './api'
 import type { Awards, Cabinet as CabinetData, Favorite, Progress, User } from './api'
@@ -38,16 +40,17 @@ export function Cabinet({ user, go, openRite, openItem }: {
     return () => { alive = false }
   }, [userId])
 
-  const title = <div className="page-title"><p className="kicker">ЛИЧНЫЙ КАБИНЕТ</p><h1>Ваш <i>профиль</i></h1></div>
+  // Заголовок страницы - для программ чтения с экрана; на экране вместо него фото-обложка
+  const title = <h1 className="sr-only">Личный кабинет</h1>
 
   if (!user) {
-    return <main className="catalog">{title}
+    return <CabinetPage><main className="catalog">{title}
       <section className="quiz-gate"><h2>Войдите в аккаунт</h2><p>Личный кабинет доступен после входа.</p>
         <div className="quiz-buttons"><button className="btn" onClick={() => go('login')}>Войти</button></div></section>
-    </main>
+    </main></CabinetPage>
   }
-  if (status === 'loading') return <main className="catalog">{title}<p role="status" style={note}>Загрузка…</p></main>
-  if (status === 'error' || !data) return <main className="catalog">{title}<p role="alert" style={note}>Не удалось загрузить кабинет.</p></main>
+  if (status === 'loading') return <CabinetPage><main className="catalog">{title}<p role="status" style={note}>Загрузка…</p></main></CabinetPage>
+  if (status === 'error' || !data) return <CabinetPage><main className="catalog">{title}<p role="alert" style={note}>Не удалось загрузить кабинет.</p></main></CabinetPage>
 
   const open = (f: Favorite) => {
     if (f.itemType === 'RITE') openRite(f.itemId)
@@ -61,7 +64,7 @@ export function Cabinet({ user, go, openRite, openItem }: {
   }
   const { profile } = data
 
-  return <main className="catalog">{title}
+  return <CabinetPage><main className="catalog">{title}
     <div className="cab-grid">
       <aside className="cab-card cab-profile">
         <LevelAvatar name={profile.displayName} level={awards?.level.number ?? 1} />
@@ -108,5 +111,14 @@ export function Cabinet({ user, go, openRite, openItem }: {
         </section>
       </div>
     </div>
-  </main>
+  </main></CabinetPage>
+}
+
+/** Верх кабинета - обложка: та же фотография, что на главной («Открой наследие Кыргызстана»), без затемнения. */
+function CabinetPage({ children }: { children: ReactNode }) {
+  return <div className="cab-page">
+    <div className="cab-cover" aria-hidden="true"
+      style={{ backgroundImage: `url(${photos.hero})` }} />
+    {children}
+  </div>
 }
