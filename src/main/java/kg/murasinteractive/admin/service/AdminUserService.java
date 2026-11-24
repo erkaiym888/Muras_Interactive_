@@ -102,7 +102,7 @@ public class AdminUserService {
     }
 
     private static AdminUserRow toRow(UserAccount u, String currentEmail) {
-        return new AdminUserRow(u.getUserId(), u.getEmail(), u.getDisplayName(), u.getRole().getRoleName(),
+        return new AdminUserRow(u.getUserId(), u.getEmail(), u.getDisplayName(), u.getAvatarUrl(), u.getRole().getRoleName(),
                 u.isBlocked(), u.getTotalPoints(), u.getRegisteredAt(), u.getEmail().equals(currentEmail));
     }
 }

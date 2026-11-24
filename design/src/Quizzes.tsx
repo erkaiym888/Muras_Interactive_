@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import './features.css'
-import { ApiError, fetchHint, fetchProgress, fetchQuiz, fetchQuizzes, submitAttempt } from './api'
+import { ApiError, fetchAwards, fetchHint, fetchProgress, fetchQuiz, fetchQuizzes, submitAttempt } from './api'
 import type { AttemptResult, Progress, Quiz, QuizHint, QuizQuestion, QuizSummary, User } from './api'
 import { ProgressPanel, QuizHistoryPage, attemptsWord } from './QuizHistory'
 import { QuizResultView, TOPIC, pointsWord } from './QuizResult'
@@ -176,6 +176,7 @@ export function Quizzes({ user, go }: { user: User | null; go: (p: 'login' | 're
   const [activeId, setActiveId] = useState<number | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [progress, setProgress] = useState<Progress | null>(null)
+  const [level, setLevel] = useState(1)
   const userId = user?.id
 
   useEffect(() => {
@@ -193,6 +194,7 @@ export function Quizzes({ user, go }: { user: User | null; go: (p: 'login' | 're
     if (userId === undefined || activeId !== null || showHistory) return
     let alive = true
     fetchProgress().then(p => { if (alive) setProgress(p) }).catch(() => {})
+    fetchAwards().then(a => { if (alive) setLevel(a.level.number) }).catch(() => {})
     return () => { alive = false }
   }, [userId, activeId, showHistory])
 
@@ -221,7 +223,9 @@ export function Quizzes({ user, go }: { user: User | null; go: (p: 'login' | 're
         {(() => { const m = mine(q.id); return m && m.bestScore !== null
           ? <p className="quiz-mine"><b>{m.bestScore}%</b> лучший результат · {m.attempts} {attemptsWord(m.attempts)}</p>
           : <p className="quiz-mine new">Ещё не пройдена · +25 за первое прохождение</p> })()}
-        <button className="btn" onClick={() => setActiveId(q.id)}>{mine(q.id)?.bestScore != null ? 'Пройти снова' : 'Начать'}</button>
+        {q.difficulty === 'HARD' && level < 5
+          ? <p className="quiz-locked" role="note">🔒 Откроется на уровне «Акын» (800 очков)</p>
+          : <button className="btn" onClick={() => setActiveId(q.id)}>{mine(q.id)?.bestScore != null ? 'Пройти снова' : 'Начать'}</button>}
       </article>)}</div>
     </>}
   </main>
