@@ -27,7 +27,7 @@ public class CabinetService {
 
     public CabinetDto build(UserAccount user) {
         CabinetProfileDto profile = new CabinetProfileDto(user.getDisplayName(), user.getEmail(),
-                user.getRole().getRoleName(), user.getRegisteredAt(), user.getTotalPoints());
+                user.getRole().getRoleName(), user.getAvatarUrl(), user.getRegisteredAt(), user.getTotalPoints());
         // FR-5.4: последние прохождения викторин из таблицы quiz_attempt
         List<CabinetHistoryItemDto> history = historyService.history(user.getUserId(), null).stream()
                 .limit(HISTORY_LIMIT)

@@ -10,6 +10,7 @@ import { initLanguages, t, useI18n } from './i18n'
 import { Editor } from './Editor'
 import { Quizzes } from './Quizzes'
 import { Cabinet } from './Cabinet'
+import { Avatar } from './ProfileEdit'
 import type { User } from './api'
 import AuthenticYurtDiagram from './AuthenticYurtDiagram'
 import { PartKey, partKeys, YURT_IMAGE, yurtParts, yurtSize } from './yurt'
@@ -92,7 +93,7 @@ function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => voi
       </nav>
       <div className="drawer-account">
         {user ? <>
-          <p className="who"><span className="avatar" aria-hidden="true">{user.displayName.trim().charAt(0).toUpperCase()}</span><span><b>{user.displayName}</b><small>{ROLE_LABEL()[user.role] ?? user.role}</small></span></p>
+          <p className="who"><Avatar user={user} size="sm" /><span><b>{user.displayName}</b><small>{ROLE_LABEL()[user.role] ?? user.role}</small></span></p>
           <button className="drawer-btn" onClick={() => to('cabinet')}>{t('account.cabinet', 'Личный кабинет')} <Arrow/></button>
           <button className="drawer-btn ghost" onClick={() => { setOpen(false); onLogout() }}>{t('account.logout', 'Выйти из аккаунта')}</button>
         </> : <>
@@ -184,7 +185,7 @@ export default function App() {
   const [riteId,setRiteId]=useState<number|null>(null)
   const [folkloreRef,setFolkloreRef]=useState<FolkloreRef|null>(null)
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
-  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId} user={user}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef} user={user}/>:page==='quizzes'?<Quizzes user={user} go={go}/>:page==='cabinet'?<Cabinet user={user} go={go} openRite={id=>{setRiteId(id);go('tradition-detail')}} openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}} openFolklore={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='admin'?<Admin user={user} goLogin={()=>go('login')}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
+  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId} user={user}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef} user={user}/>:page==='quizzes'?<Quizzes user={user} go={go}/>:page==='cabinet'?<Cabinet user={user} onUser={setUser} go={go} openRite={id=>{setRiteId(id);go('tradition-detail')}} openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}} openFolklore={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='admin'?<Admin user={user} goLogin={()=>go('login')}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
   const auth=['login','register','recover','reset'].includes(page)
   return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} <Fragment key={lang}>{content}</Fragment> {!auth&&<Footer go={go}/>}</div>
 }
