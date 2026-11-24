@@ -460,6 +460,8 @@ export type AdminUserRow = {
   id: number
   email: string
   displayName: string
+  /** аватар пользователя или null (FR-6.2) */
+  avatarUrl: string | null
   role: Role
   blocked: boolean
   totalPoints: number
