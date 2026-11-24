@@ -33,6 +33,17 @@ public class UserAccount {
     @Column(name = "registered_at", nullable = false)
     private Instant registeredAt = Instant.now();
 
+    /** Аватар (FR-6.2): небольшая картинка 256×256, уже уменьшенная в браузере. */
+    @Column(name = "avatar", columnDefinition = "bytea")
+    private byte[] avatar;
+
+    @Column(name = "avatar_type", length = 20)
+    private String avatarType;
+
+    /** Когда сменили аватар - входит в адрес картинки, чтобы браузер не показывал старую из кэша. */
+    @Column(name = "avatar_updated_at")
+    private Instant avatarUpdatedAt;
+
     /** Заблокирован администратором (FR-7.3): войти нельзя, активная сессия закрывается. */
     @Column(name = "is_blocked", nullable = false, columnDefinition = "boolean default false")
     private boolean blocked = false;
@@ -49,6 +60,20 @@ public class UserAccount {
     public int getTotalPoints() { return totalPoints; }
     public void setTotalPoints(int totalPoints) { this.totalPoints = totalPoints; }
     public Instant getRegisteredAt() { return registeredAt; }
+    public byte[] getAvatar() { return avatar; }
+    public String getAvatarType() { return avatarType; }
+    public Instant getAvatarUpdatedAt() { return avatarUpdatedAt; }
+
+    public void setAvatar(byte[] avatar, String avatarType) {
+        this.avatar = avatar;
+        this.avatarType = avatarType;
+        this.avatarUpdatedAt = avatar == null ? null : Instant.now();
+    }
+
+    /** Адрес аватара для интерфейса или null, если аватара нет. */
+    public String getAvatarUrl() {
+        return avatarUpdatedAt == null ? null : "/api/users/" + userId + "/avatar?v=" + avatarUpdatedAt.toEpochMilli();
+    }
     public boolean isBlocked() { return blocked; }
     public void setBlocked(boolean blocked) { this.blocked = blocked; }
 }
