@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { t, useI18n } from './i18n'
+import { t, tf, useI18n } from './i18n'
 import { FavoriteButton } from './Favorite'
 import type { User } from './api'
 import { trackView } from './Rewards'
@@ -15,7 +15,7 @@ const ALL = 'Все'
 const Arrow = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 6l6 6-6 6" /></svg>
 const note = { textAlign: 'center' as const, color: '#716861' }
 const noImage = 'linear-gradient(135deg,#6b2a30,#2b1214)'
-const kindLabel = (kind: FolkloreKind) => (kind === 'hero' ? 'Герой' : 'Произведение')
+const kindLabel = (kind: FolkloreKind) => (kind === 'hero' ? t('folklore.s1', "Герой") : t('folklore.s2', "Произведение"))
 const shorten = (text: string | null, max = 150) =>
   !text ? '' : text.length > max ? `${text.slice(0, max).trimEnd()}…` : text
 
@@ -55,16 +55,16 @@ export function Folklore({ openItem }: { openItem: (ref: FolkloreRef) => void })
       <button className={typeId === null ? 'active' : ''} aria-pressed={typeId === null} onClick={() => setTypeId(null)}>{t('folklore.all', ALL)}</button>
       {types.map(x => <button className={typeId === x.id ? 'active' : ''} aria-pressed={typeId === x.id} onClick={() => setTypeId(x.id)} key={x.id}>{x.name}</button>)}
     </div>
-    {status === 'loading' && <p role="status" style={note}>Загрузка…</p>}
-    {status === 'error' && <p role="alert" style={note}>Не удалось загрузить раздел. Проверьте, что сервер запущен.</p>}
-    {status === 'ready' && shown.length === 0 && <p style={note}>В этой категории пока нет материалов.</p>}
+    {status === 'loading' && <p role="status" style={note}>{t('folklore.s3', "Загрузка…")}</p>}
+    {status === 'error' && <p role="alert" style={note}>{t('folklore.s4', "Не удалось загрузить раздел. Проверьте, что сервер запущен.")}</p>}
+    {status === 'ready' && shown.length === 0 && <p style={note}>{t('folklore.s5', "В этой категории пока нет материалов.")}</p>}
     <div className="card-grid">{shown.map(item => <article className="trad-card" key={`${item.kind}-${item.id}`}>
       <div className="image">
         {item.imageUrl ? <img src={item.imageUrl} alt={item.title} /> : <Placeholder title={item.title} />}
         <span>{kindLabel(item.kind)}</span>
       </div>
       <p>{item.type}</p><h2>{item.title}</h2>
-      <div><span>{shorten(item.summary)}</span><button onClick={() => openItem({ kind: item.kind, id: item.id })} aria-label={`Подробнее: ${item.title}`}><Arrow /></button></div>
+      <div><span>{shorten(item.summary)}</span><button onClick={() => openItem({ kind: item.kind, id: item.id })} aria-label={tf('folklore.s6', "Подробнее: {0}", item.title)}><Arrow /></button></div>
     </article>)}</div>
   </main>
 }
@@ -100,7 +100,7 @@ export function FolkloreDetail({ go, item, openNode, user }: {
 
   if (status !== 'ready' || !detail) {
     return <main className="trad-detail">{back}
-      {status === 'error' ? <p role="alert" style={note}>Не удалось загрузить карточку.</p> : <p role="status" style={note}>Загрузка…</p>}
+      {status === 'error' ? <p role="alert" style={note}>{t('folklore.s7', "Не удалось загрузить карточку.")}</p> : <p role="status" style={note}>{t('folklore.s3', "Загрузка…")}</p>}
     </main>
   }
 
@@ -115,11 +115,11 @@ export function FolkloreDetail({ go, item, openNode, user }: {
       <div><p>{detail.type.toUpperCase()}</p><h1>{detail.title}</h1><span>{kindLabel(detail.kind)}</span></div>
     </div>
     <div className="reading">
-      <aside><p>Тип<br /><b>{detail.type}</b></p><p>Раздел<br /><b>{kindLabel(detail.kind)}</b></p></aside>
+      <aside><p>{t('folklore.s8', "Тип")}<br /><b>{detail.type}</b></p><p>{t('folklore.s9', "Раздел")}<br /><b>{kindLabel(detail.kind)}</b></p></aside>
       <article>
         {paragraphs.map((p, i) => <p className={i === 0 ? 'big' : undefined} key={i}>{linker.text(p)}</p>)}
         {detail.images.length > 0 && <>
-          <h2>Иллюстрации</h2>
+          <h2>{t('folklore.s10', "Иллюстрации")}</h2>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {detail.images.map(img => <figure key={img.url} style={{ margin: 0, flex: '1 1 240px' }}>
               <img src={img.url} alt={img.caption ?? detail.title} style={{ height: 'auto' }} />

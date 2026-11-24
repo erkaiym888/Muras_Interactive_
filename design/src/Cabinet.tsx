@@ -1,3 +1,4 @@
+import { locale, lrec, t, tf, ts } from './i18n'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { photos } from './data'
@@ -11,9 +12,9 @@ import { ProfileEdit } from './ProfileEdit'
 
 type Status = 'loading' | 'ready' | 'error'
 
-const ROLE: Record<string, string> = { ADMIN: 'Администратор', EDITOR: 'Редактор контента', USER: 'Посетитель' }
+const ROLE: Record<string, string> = lrec('cabinet.role', { ADMIN: 'Администратор', EDITOR: 'Редактор контента', USER: 'Посетитель' })
 const note = { textAlign: 'center' as const, color: '#716861' }
-const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+const formatDate = (iso: string) => new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' })
 
 /** Личный кабинет (FR-6.2): профиль, очки, награды, история викторин и избранное. Доступен любой роли. */
 export function Cabinet({ user, go, openRite, openItem, onUser }: {
@@ -45,16 +46,16 @@ export function Cabinet({ user, go, openRite, openItem, onUser }: {
   }, [userId])
 
   // Заголовок страницы - для программ чтения с экрана; на экране вместо него фото-обложка
-  const title = <h1 className="sr-only">Личный кабинет</h1>
+  const title = <h1 className="sr-only">{t('cabinet.s1', "Личный кабинет")}</h1>
 
   if (!user) {
     return <CabinetPage><main className="catalog">{title}
-      <section className="quiz-gate"><h2>Войдите в аккаунт</h2><p>Личный кабинет доступен после входа.</p>
-        <div className="quiz-buttons"><button className="btn" onClick={() => go('login')}>Войти</button></div></section>
+      <section className="quiz-gate"><h2>{t('cabinet.s2', "Войдите в аккаунт")}</h2><p>{t('cabinet.s3', "Личный кабинет доступен после входа.")}</p>
+        <div className="quiz-buttons"><button className="btn" onClick={() => go('login')}>{t('cabinet.s4', "Войти")}</button></div></section>
     </main></CabinetPage>
   }
-  if (status === 'loading') return <CabinetPage><main className="catalog">{title}<p role="status" style={note}>Загрузка…</p></main></CabinetPage>
-  if (status === 'error' || !data) return <CabinetPage><main className="catalog">{title}<p role="alert" style={note}>Не удалось загрузить кабинет.</p></main></CabinetPage>
+  if (status === 'loading') return <CabinetPage><main className="catalog">{title}<p role="status" style={note}>{t('cabinet.s5', "Загрузка…")}</p></main></CabinetPage>
+  if (status === 'error' || !data) return <CabinetPage><main className="catalog">{title}<p role="alert" style={note}>{t('cabinet.s6', "Не удалось загрузить кабинет.")}</p></main></CabinetPage>
 
   const open = (f: Favorite) => {
     if (f.itemType === 'RITE') openRite(f.itemId)
@@ -76,43 +77,43 @@ export function Cabinet({ user, go, openRite, openItem, onUser }: {
         <h2>{profile.displayName}</h2>
         <p>{profile.email}</p>
         <span className="cab-role">{ROLE[profile.role] ?? profile.role}</span>
-        <div className="cab-points"><b>{profile.totalPoints}</b><span>очков</span></div>
-        <p className="cab-since">С нами с {formatDate(profile.registeredAt)}</p>
+        <div className="cab-points"><b>{profile.totalPoints}</b><span>{t('cabinet.s7', "очков")}</span></div>
+        <p className="cab-since">{t('cabinet.s8', "С нами с")}{' '}{formatDate(profile.registeredAt)}</p>
         {awards && <LevelCard awards={awards} />}
-        <button className="btn ghost cab-edit" onClick={() => setEditing(true)}>Редактировать профиль</button>
+        <button className="btn ghost cab-edit" onClick={() => setEditing(true)}>{t('cabinet.s9', "Редактировать профиль")}</button>
       </aside>
       <div>
         {canEditContent(user) && <section className="cab-card">
-          <h2>Управление содержимым</h2>
-          <p className="cab-note">У вашей роли есть доступ к редактору контента.</p>
-          <button className="btn" onClick={() => go('editor')}>Открыть редактор</button>
+          <h2>{t('cabinet.s10', "Управление содержимым")}</h2>
+          <p className="cab-note">{t('cabinet.s11', "У вашей роли есть доступ к редактору контента.")}</p>
+          <button className="btn" onClick={() => go('editor')}>{t('cabinet.s12', "Открыть редактор")}</button>
         </section>}
         <section className="cab-card">
-          <h2>Награды</h2>
+          <h2>{t('cabinet.s13', "Награды")}</h2>
           {awards ? <AwardsPanel awards={awards} />
-            : data.awards.length === 0 ? <p className="cab-empty">Наград пока нет. Они появятся за прохождение викторин и изучение материалов.</p>
-            : <ul className="cab-list">{data.awards.map(a => <li key={a.title}><span><b>{a.title}</b><small>{a.description}</small></span><small>{formatDate(a.awardedAt)}</small></li>)}</ul>}
+            : data.awards.length === 0 ? <p className="cab-empty">{t('cabinet.s14', "Наград пока нет. Они появятся за прохождение викторин и изучение материалов.")}</p>
+            : <ul className="cab-list">{data.awards.map(a => <li key={a.title}><span><b>{ts(a.title)}</b><small>{ts(a.description)}</small></span><small>{formatDate(a.awardedAt)}</small></li>)}</ul>}
         </section>
         {progress && progress.attemptsCount > 0 && <section className="cab-card">
-          <h2>Прогресс в викторинах</h2>
+          <h2>{t('cabinet.s15', "Прогресс в викторинах")}</h2>
           <ProgressPanel progress={progress} />
         </section>}
         <section className="cab-card">
-          <h2>История викторин</h2>
+          <h2>{t('cabinet.s16', "История викторин")}</h2>
           {openAttempt !== null ? <AttemptDetail attemptId={openAttempt} onBack={() => setOpenAttempt(null)} />
-            : data.history.length === 0 ? <p className="cab-empty">Вы ещё не проходили викторины.</p>
+            : data.history.length === 0 ? <p className="cab-empty">{t('cabinet.s17', "Вы ещё не проходили викторины.")}</p>
             : <ul className="cab-list">{data.history.map(h => <li key={h.attemptId}>
               <span><button className="cab-link" onClick={() => setOpenAttempt(h.attemptId)}>{h.quizTitle}</button>
-                <small>{h.scorePercent}% · +{h.pointsEarned} очков{h.repeatAttempt ? ' · повторно' : ''}</small></span>
+                <small>{h.scorePercent}% · +{h.pointsEarned}{' '}{t('cabinet.s7', "очков")}{h.repeatAttempt ? t('cabinet.s18', " · повторно") : ''}</small></span>
               <small>{formatDateTime(h.completedAt)}</small>
             </li>)}</ul>}
         </section>
         <section className="cab-card">
-          <h2>Избранное</h2>
-          {data.favorites.length === 0 ? <p className="cab-empty">В избранном пока пусто. Нажмите «В избранное» на странице обряда, героя или произведения.</p>
+          <h2>{t('cabinet.s19', "Избранное")}</h2>
+          {data.favorites.length === 0 ? <p className="cab-empty">{t('cabinet.s20', "В избранном пока пусто. Нажмите «В избранное» на странице обряда, героя или произведения.")}</p>
             : <ul className="cab-list">{data.favorites.map(f => <li key={`${f.itemType}-${f.itemId}`}>
               <span><button className="cab-link" onClick={() => open(f)}>{f.title}</button><small>{f.subtitle}</small></span>
-              <button className="cab-x" onClick={() => remove(f)} aria-label={`Убрать из избранного: ${f.title}`}>×</button>
+              <button className="cab-x" onClick={() => remove(f)} aria-label={tf('cabinet.s21', "Убрать из избранного: {0}", f.title)}>×</button>
             </li>)}</ul>}
         </section>
       </div>

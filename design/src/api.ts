@@ -1,5 +1,5 @@
 // Запросы к Spring Boot. Адрес /api в разработке проксируется на localhost:8080 (см. vite.config.ts).
-import { currentLang } from './i18n'
+import { currentLang, tf } from './i18n'
 
 export type RiteCategory = { id: number; name: string }
 
@@ -32,7 +32,7 @@ const langHeaders = (): Record<string, string> => ({ 'X-Lang': currentLang() })
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { headers: langHeaders() })
-  if (!response.ok) throw new Error(`Ошибка ${response.status}`)
+  if (!response.ok) throw new Error(tf('api.s1', "Ошибка {0}", response.status))
   return response.json() as Promise<T>
 }
 

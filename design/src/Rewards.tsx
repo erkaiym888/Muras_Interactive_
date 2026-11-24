@@ -1,3 +1,4 @@
+import { locale, t, tf, ts } from './i18n'
 import { useEffect, useState } from 'react'
 import { postView } from './api'
 import type { Achievement, Awards, Level, RewardEvent, User, ViewType } from './api'
@@ -34,7 +35,7 @@ export function RewardToasts() {
       if (plain.length) {
         // Очки подряд (например, открытие нескольких элементов юрты) копятся в одном сообщении
         const sum = plain.reduce((s, p) => s + p.points, 0)
-        const label = [...new Set(plain.map(p => p.label))].join(' · ')
+        const label = [...new Set(plain.map(p => ts(p.label)))].join(' · ')
         const id = nextId++
         setToasts(t => {
           const prev = t.find(x => x.kind === 'points')
@@ -44,8 +45,8 @@ export function RewardToasts() {
         })
         setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500)
       }
-      e.newAchievements.forEach(a => items.push({ id: nextId++, kind: 'badge', title: `Новый значок «${a.title}»`, text: `${a.condition} · +${a.bonus}`, achievement: a }))
-      if (e.levelUp) items.push({ id: nextId++, kind: 'level', title: `Уровень ${e.levelUp.number}: ${e.levelUp.title}`, text: e.levelUp.reward ?? 'Новый уровень!' })
+      e.newAchievements.forEach(a => items.push({ id: nextId++, kind: 'badge', title: tf('rewards.s1', "Новый значок «{0}»", ts(a.title)), text: `${ts(a.condition)} · +${a.bonus}`, achievement: a }))
+      if (e.levelUp) items.push({ id: nextId++, kind: 'level', title: tf('rewards.s2', "Уровень {0}: {1}", e.levelUp.number, ts(e.levelUp.title)), text: ts(e.levelUp.reward) ?? t('rewards.s3', "Новый уровень!") })
       setToasts(t => [...t, ...items])
       items.forEach(it => setTimeout(() => setToasts(t => t.filter(x => x.id !== it.id)), it.kind === 'points' ? 3500 : 6500))
     }
@@ -53,10 +54,10 @@ export function RewardToasts() {
     return () => { listeners.delete(onReward) }
   }, [])
   return <div className="reward-toasts" role="status" aria-live="polite">
-    {toasts.map(t => <div key={t.id} className={`reward-toast rt-${t.kind}`}>
-      {t.kind === 'badge' && t.achievement ? <BadgeIcon code={t.achievement.code} earned /> : t.kind === 'level' ? <span className="rt-up">▲</span> : <span className="rt-pts">{t.title}</span>}
-      <div><b>{t.kind === 'points' ? 'Очки начислены' : t.title}</b><small>{t.text}</small></div>
-      <button onClick={() => setToasts(x => x.filter(y => y.id !== t.id))} aria-label="Закрыть">×</button>
+    {toasts.map(toast => <div key={toast.id} className={`reward-toast rt-${toast.kind}`}>
+      {toast.kind === 'badge' && toast.achievement ? <BadgeIcon code={toast.achievement.code} earned /> : toast.kind === 'level' ? <span className="rt-up">▲</span> : <span className="rt-pts">{toast.title}</span>}
+      <div><b>{toast.kind === 'points' ? t('rewards.s4', "Очки начислены") : toast.title}</b><small>{toast.text}</small></div>
+      <button onClick={() => setToasts(x => x.filter(y => y.id !== toast.id))} aria-label={t('rewards.s5', "Закрыть")}>×</button>
     </div>)}
   </div>
 }
@@ -101,12 +102,12 @@ export function LevelAvatar({ name, level, size = 'lg', avatarUrl }: { name: str
 export function LevelCard({ awards }: { awards: Awards }) {
   const { level, nextLevel } = awards
   return <div className="level-card">
-    <p className="kicker">Уровень {level.number} из {awards.levels.length}</p>
-    <h3>{level.title}</h3>
-    {level.reward && <p className="lc-reward">{level.reward}</p>}
-    <div className="lc-bar" role="progressbar" aria-label="Прогресс до следующего уровня" aria-valuemin={0} aria-valuemax={100} aria-valuenow={awards.progressPercent}><i style={{ width: `${awards.progressPercent}%` }} /></div>
-    <p className="lc-next">{nextLevel ? <>Ещё <b>{awards.pointsToNext}</b> до уровня «{nextLevel.title}»</> : 'Достигнут высший уровень'}</p>
-    {awards.loginStreak > 1 && <p className="lc-streak">Серия входов: <b>{awards.loginStreak}</b> {awards.loginStreak < 5 ? 'дня' : 'дней'} подряд</p>}
+    <p className="kicker">{t('rewards.s6', "Уровень")}{' '}{level.number}{' '}{t('rewards.s7', "из")}{' '}{awards.levels.length}</p>
+    <h3>{ts(level.title)}</h3>
+    {level.reward && <p className="lc-reward">{ts(level.reward)}</p>}
+    <div className="lc-bar" role="progressbar" aria-label={t('rewards.s8', "Прогресс до следующего уровня")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={awards.progressPercent}><i style={{ width: `${awards.progressPercent}%` }} /></div>
+    <p className="lc-next">{nextLevel ? <>{t('rewards.s9', "Ещё")}{' '}<b>{awards.pointsToNext}</b>{' '}{t('rewards.s10', "до уровня «")}{ts(nextLevel.title)}»</> : t('rewards.s11', "Достигнут высший уровень")}</p>
+    {awards.loginStreak > 1 && <p className="lc-streak">{t('rewards.s12', "Серия входов:")}{' '}<b>{awards.loginStreak}</b> {awards.loginStreak < 5 ? t('rewards.s13', "дня") : t('rewards.s14', "дней")}{' '}{t('rewards.s15', "подряд")}</p>}
   </div>
 }
 
@@ -114,21 +115,21 @@ export function AwardsPanel({ awards }: { awards: Awards }) {
   const groups = [...new Set(awards.achievements.map(a => a.group))]
   const earned = awards.achievements.filter(a => a.earned).length
   return <div className="awards-panel">
-    <p className="ap-count"><b>{earned}</b> из {awards.achievements.length} значков</p>
+    <p className="ap-count"><b>{earned}</b>{' '}{t('rewards.s7', "из")}{' '}{awards.achievements.length}{' '}{t('rewards.s16', "значков")}</p>
     {groups.map(g => <div className="ap-group" key={g}>
-      <h3>{g}</h3>
+      <h3>{ts(g)}</h3>
       <ul className="badge-grid">{awards.achievements.filter(a => a.group === g).map(a => <li key={a.code} className={a.earned ? 'earned' : 'locked'}>
         <BadgeIcon code={a.code} earned={a.earned} />
-        <b>{a.title}</b>
-        <small>{a.condition}</small>
-        <em>{a.earned && a.awardedAt ? new Date(a.awardedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : `+${a.bonus}`}</em>
+        <b>{ts(a.title)}</b>
+        <small>{ts(a.condition)}</small>
+        <em>{a.earned && a.awardedAt ? new Date(a.awardedAt).toLocaleDateString(locale(), { day: 'numeric', month: 'long' }) : `+${a.bonus}`}</em>
       </li>)}</ul>
     </div>)}
     <details className="levels-ladder">
-      <summary>Все уровни</summary>
+      <summary>{t('rewards.s17', "Все уровни")}</summary>
       <ol>{awards.levels.map(l => <li key={l.number} className={l.number === awards.level.number ? 'current' : l.number < awards.level.number ? 'done' : ''}>
         <LevelAvatar name={String(l.number)} level={l.number} size="sm" />
-        <span><b>{l.title}</b><small>{l.minPoints} очков · {l.reward}</small></span>
+        <span><b>{ts(l.title)}</b><small>{l.minPoints}{' '}{t('rewards.s18', "очков ·")}{' '}{ts(l.reward)}</small></span>
       </li>)}</ol>
     </details>
   </div>
@@ -138,8 +139,8 @@ export function AwardsPanel({ awards }: { awards: Awards }) {
 export function NewRewards({ achievements, levelUp }: { achievements: Achievement[]; levelUp: Level | null | undefined }) {
   if (!achievements.length && !levelUp) return null
   return <div className="new-rewards">
-    <h3>Новые награды</h3>
-    {levelUp && <p className="nr-level"><LevelAvatar name={String(levelUp.number)} level={levelUp.number} size="sm" /><span><b>Новый уровень: {levelUp.title}</b><small>{levelUp.reward}</small></span></p>}
-    <ul>{achievements.map(a => <li key={a.code}><BadgeIcon code={a.code} earned /><span><b>«{a.title}»</b><small>{a.condition}</small></span><em>+{a.bonus}</em></li>)}</ul>
+    <h3>{t('rewards.s19', "Новые награды")}</h3>
+    {levelUp && <p className="nr-level"><LevelAvatar name={String(levelUp.number)} level={levelUp.number} size="sm" /><span><b>{t('rewards.s20', "Новый уровень:")}{' '}{ts(levelUp.title)}</b><small>{ts(levelUp.reward)}</small></span></p>}
+    <ul>{achievements.map(a => <li key={a.code}><BadgeIcon code={a.code} earned /><span><b>«{ts(a.title)}»</b><small>{ts(a.condition)}</small></span><em>+{a.bonus}</em></li>)}</ul>
   </div>
 }

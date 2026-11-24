@@ -1,3 +1,4 @@
+import { lrec, t, tf } from './i18n'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { fetchRelations } from './api'
@@ -14,7 +15,7 @@ import type { RelationKind, RelationNode, Relations } from './api'
 export type OpenNode = (node: RelationNode) => void
 
 const nodeKey = (n: RelationNode) => `${n.kind}:${n.id ?? n.key}`
-const KIND_LABEL: Record<RelationKind, string> = { rite: 'обряд', hero: 'герой', work: 'произведение', yurt: 'элемент юрты' }
+const KIND_LABEL: Record<RelationKind, string> = lrec('relations.kind', { rite: 'обряд', hero: 'герой', work: 'произведение', yurt: 'элемент юрты' })
 
 /** Связанные материалы одним списком (прямые и косвенные). null - ещё загружаются или не удалось. */
 export function useRelationLinks(kind: RelationKind, id: number | string | null): RelationNode[] | null {
@@ -120,12 +121,12 @@ export function SeeAlso({ linker, compact = false }: { linker: Linker; compact?:
   const rest = linker.rest()
   if (rest.length === 0) return null
   return <p className={compact ? 'see-also compact' : 'see-also'}>
-    <span>Связано также:</span>{' '}
+    <span>{t('relations.s1', "Связано также:")}</span>{' '}
     {rest.map((n, i) => <span key={nodeKey(n)}>
       {i > 0 && ', '}
-      <a href="#" className={`rel-link k-${n.kind}`} title={n.via ? `через «${n.via}»` : KIND_LABEL[n.kind]}
+      <a href="#" className={`rel-link k-${n.kind}`} title={n.via ? tf('relations.s2', "через «{0}»", n.via) : KIND_LABEL[n.kind]}
         onClick={e => { e.preventDefault(); linker.onOpen(n) }}>{n.title}</a>
-      {!compact && <small> ({KIND_LABEL[n.kind]}{n.via ? `, через «${n.via}»` : ''})</small>}
+      {!compact && <small> ({KIND_LABEL[n.kind]}{n.via ? tf('relations.s3', ", через «{0}»", n.via) : ''})</small>}
     </span>)}
   </p>
 }
