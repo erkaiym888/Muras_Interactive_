@@ -193,6 +193,10 @@ export type RiteForm = {
   sources: string
   steps: { title: string; text: string }[]
   images: { url: string; caption: string }[]
+  /** Связи (FR-3.3) */
+  yurtElementKeys: string[]
+  heroIds: number[]
+  workIds: number[]
 }
 
 export type EditorCategory = { id: number; name: string; riteCount: number }
@@ -494,3 +498,25 @@ export const translationForm = (type: string, id: number, lang: string) =>
   getAuthed<TranslationForm>(`/api/editor/translations/${type}/${id}?lang=${encodeURIComponent(lang)}`)
 export const saveTranslation = (type: string, id: number, lang: string, fields: Record<string, string>) =>
   send<TranslationForm>('PUT', `/api/editor/translations/${type}/${id}?lang=${encodeURIComponent(lang)}`, { fields })
+
+// ---------- Поиск (FR-4.1) ----------
+
+export type SearchKind = 'rite' | 'hero' | 'work' | 'yurt'
+export type SearchResult = { kind: SearchKind; id: number | null; key: string | null; title: string; subtitle: string | null; snippet: string | null }
+export type SearchResponse = { query: string; total: number; results: SearchResult[] }
+
+export const search = (q: string, limit?: number) =>
+  getJson<SearchResponse>(`/api/search?q=${encodeURIComponent(q)}${limit ? `&limit=${limit}` : ''}`)
+
+// ---------- Связи между разделами (FR-3.3) ----------
+
+export type RelationKind = 'rite' | 'hero' | 'work' | 'yurt'
+export type RelationNode = { kind: RelationKind; id: number | null; key: string | null; title: string; subtitle: string | null; via: string | null }
+export type Relations = { center: RelationNode; rites: RelationNode[]; heroes: RelationNode[]; works: RelationNode[]; yurtElements: RelationNode[] }
+
+export const fetchRelations = (kind: RelationKind, idOrKey: number | string) =>
+  getJson<Relations>(`/api/relations/${kind}/${encodeURIComponent(String(idOrKey))}`)
+
+export type RelationOption = { id: number | null; key: string | null; title: string; subtitle: string | null }
+export type RelationOptions = { yurtElements: RelationOption[]; heroes: RelationOption[]; works: RelationOption[] }
+export const editorRelationOptions = () => getAuthed<RelationOptions>('/api/editor/relation-options')

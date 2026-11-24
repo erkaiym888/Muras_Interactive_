@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react'
 import { photos } from './data'
 import { fetchCategories, fetchRite, fetchRites } from './api'
 import type { RiteCategory, RiteDetail, RiteSort, RiteSummary } from './api'
+import { Linker, SeeAlso, useRelationLinks } from './Relations'
+import type { OpenNode } from './Relations'
 
 type Status = 'loading' | 'ready' | 'error'
 type Go = (page: 'traditions' | 'tradition-detail') => void
@@ -80,9 +82,10 @@ export function Traditions({ openRite }: { openRite: (id: number) => void }) {
 }
 
 /** Карточка обряда (FR-2.2): название, категория, описание, этапы, символика, изображения, источники. */
-export function TraditionDetail({ go, riteId, user }: { go: Go; riteId: number | null; user: User | null }) {
+export function TraditionDetail({ go, riteId, openNode, user }: { go: Go; riteId: number | null; openNode: OpenNode; user: User | null }) {
   const [rite, setRite] = useState<RiteDetail | null>(null)
   const [status, setStatus] = useState<Status>('loading')
+  const links = useRelationLinks('rite', riteId)
 
   useEffect(() => {
     if (riteId === null) { setStatus('error'); return }
@@ -103,6 +106,8 @@ export function TraditionDetail({ go, riteId, user }: { go: Go; riteId: number |
   }
 
   const paragraphs = (rite.description ?? rite.summary).split(/\n\s*\n/).filter(Boolean)
+  // Связи (FR-3.3): упомянутые в тексте материалы становятся ссылками
+  const linker = new Linker(links ?? [], openNode)
   const image = rite.images[0]?.url ?? photos.hero
 
   return <main className="trad-detail">{back}
@@ -113,10 +118,11 @@ export function TraditionDetail({ go, riteId, user }: { go: Go; riteId: number |
     <div className="reading">
       <aside><p>Категория<br /><b>{rite.category}</b></p><p>Этапов<br /><b>{rite.steps.length}</b></p></aside>
       <article>
-        {paragraphs.map((p, i) => <p className={i === 0 ? 'big' : undefined} key={i}>{p}</p>)}
-        {rite.steps.length > 0 && <><h2>Этапы обряда</h2><ol>{rite.steps.map(s => <li key={s.order}>{s.title && <b>{s.title}</b>}<span>{s.text}</span></li>)}</ol></>}
-        {rite.symbolism && <><h2>Культурный смысл</h2><p>{rite.symbolism}</p></>}
+        {paragraphs.map((p, i) => <p className={i === 0 ? 'big' : undefined} key={i}>{linker.text(p)}</p>)}
+        {rite.steps.length > 0 && <><h2>Этапы обряда</h2><ol>{rite.steps.map(s => <li key={s.order}>{s.title && <b>{s.title}</b>}<span>{linker.text(s.text)}</span></li>)}</ol></>}
+        {rite.symbolism && <><h2>Культурный смысл</h2><p>{linker.text(rite.symbolism)}</p></>}
         {rite.sources && <div className="sources"><b>Источники</b><p>{rite.sources}</p></div>}
+        <SeeAlso linker={linker} />
       </article>
     </div>
   </main>

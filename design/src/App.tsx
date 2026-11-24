@@ -13,7 +13,9 @@ import { Editor } from './Editor'
 import { Quizzes } from './Quizzes'
 import { Cabinet } from './Cabinet'
 import { Avatar } from './ProfileEdit'
-import type { User } from './api'
+import type { RelationNode, SearchResult, User } from './api'
+import { HeaderSearch } from './Search'
+import { Linker, SeeAlso, useRelationLinks } from './Relations'
 import AuthenticYurtDiagram from './AuthenticYurtDiagram'
 import { PartKey, partKeys, YURT_IMAGE, yurtParts, yurtSize } from './yurt'
 
@@ -51,7 +53,7 @@ function LanguageSwitch() {
 }
 
 /** Шапка: только логотип и кнопка меню. Все разделы и аккаунт - в выезжающей панели. */
-function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => void; user: User | null; onLogout: () => void }) {
+function Header({ page, go, user, onLogout, onFound }: { page: Page; go: (p: Page) => void; user: User | null; onLogout: () => void; onFound: (r: SearchResult) => void }) {
   const [open, setOpen] = useState(false)
   useI18n() // перерисовка подписей при смене языка
   const burger = useRef<HTMLButtonElement>(null)
@@ -82,6 +84,7 @@ function Header({ page, go, user, onLogout }: { page: Page; go: (p: Page) => voi
 
   return <header className="header">
     <Logo onClick={() => go('home')} />
+    <HeaderSearch onOpen={onFound} />
     <button ref={burger} className={open ? 'burger open' : 'burger'} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="site-menu" aria-label={open ? t('menu.close', 'Закрыть меню') : t('menu.open', 'Открыть меню')}>
       <span className="burger-label">{t('menu', 'Меню')}</span><span className="burger-lines" aria-hidden="true"><i/><i/><i/></span>
     </button>
@@ -114,7 +117,7 @@ function Button({ children, secondary, onClick, type='button' }: { children: Rea
 
 function Footer({ go }: { go: (p: Page) => void }) {
   useI18n()
-  return <footer><div><Logo onClick={() => go('home')} /><p>{t('footer.tagline', 'Цифровой музей живого наследия Кыргызстана.')}</p></div><div className="footer-links"><button onClick={() => go('yurt')}>{t('footer.yurt', 'Исследовать юрту')}</button><button onClick={() => go('traditions')}>{t('nav.traditions', 'Традиции')}</button><span>© 2025 Muras Interactive</span></div></footer>
+  return <footer><div><Logo onClick={() => go('home')} /><p>{t('footer.tagline', 'Цифровой музей живого наследия Кыргызстана.')}</p></div><div className="footer-links"><button onClick={() => go('yurt')}>{t('footer.yurt', 'Исследовать юрту')}</button><button onClick={() => go('traditions')}>{t('nav.traditions', 'Традиции')}</button><span>© 2026 Muras Interactive</span></div></footer>
 }
 
 function Home({ go }: { go: (p: Page) => void }) {
@@ -144,9 +147,12 @@ function Lens({ k, className = 'lens' }: { k: PartKey; className?: string }) {
   </div>
 }
 
-function Yurt({ go, selected, setSelected, user }: { go: (p: Page) => void; selected: PartKey; setSelected: (k: PartKey) => void; user: User | null }) {
+function Yurt({ go, selected, setSelected, user, openNode }: { go: (p: Page) => void; selected: PartKey; setSelected: (k: PartKey) => void; user: User | null; openNode: (n: RelationNode) => void }) {
   const [panelOpen, setPanelOpen] = useState(true)
+  const links = useRelationLinks('yurt', selected)
   const part = yurtParts[selected]
+  // Связи (FR-3.3): обряды, герои и произведения, упомянутые в карточке, - ссылками
+  const linker = new Linker(links ?? [], openNode)
   const idx = partKeys.indexOf(selected)
   // FR-5.3: +2 за первое открытие элемента, значок «Хозяин юрты»
   const pick = (k: PartKey) => { setSelected(k); setPanelOpen(true); trackView(user, 'YURT_PART', k) }
@@ -160,22 +166,25 @@ function Yurt({ go, selected, setSelected, user }: { go: (p: Page) => void; sele
       <div className="size-strip"><p>{yurtSize.title}</p><div><span>Высота в центре<b>{yurtSize.height}</b></span><span>Высота кереге<b>{yurtSize.keregeHeight}</b></span><span>Диаметр<b>{yurtSize.diameter}</b></span></div></div>
     </div>
       <aside className={panelOpen ? 'info-panel' : 'info-panel panel-closed'} aria-live="polite"><button className="close" onClick={() => setPanelOpen(false)} aria-label="Закрыть">×</button>{panelOpen ? <>
-        <p className="kicker"><span className="no">{String(part.no).padStart(2, '0')}</span>{part.group} · {part.eyebrow}</p><h2>{part.name}</h2><p className="info-intro">{part.description}</p>
+        <p className="kicker"><span className="no">{String(part.no).padStart(2, '0')}</span>{part.group} · {part.eyebrow}</p><h2>{part.name}</h2><p className="info-intro">{linker.text(part.description)}</p>
         <Lens k={selected}/>
-        <dl><div><dt>Назначение</dt><dd>{part.purpose}</dd></div><div><dt>Культурное значение</dt><dd>{part.meaning}</dd></div><div><dt>Связанные элементы</dt><dd className="chips">{part.related.map(r => { const k = byName(r); return k ? <button key={r} onClick={() => pick(k)}>{r}</button> : <span key={r}>{r}</span> })}</dd></div></dl>
+        <dl><div><dt>Назначение</dt><dd>{linker.text(part.purpose)}</dd></div><div><dt>Культурное значение</dt><dd>{linker.text(part.meaning)}</dd></div><div><dt>Связанные элементы</dt><dd className="chips">{part.related.map(r => { const k = byName(r); return k ? <button key={r} onClick={() => pick(k)}>{r}</button> : <span key={r}>{r}</span> })}</dd></div></dl>
+        <SeeAlso linker={linker} compact />
         <div className="panel-nav"><button onClick={() => step(-1)} aria-label="Предыдущий элемент">←</button><Button onClick={() => go('yurt-detail')}>Подробнее об элементе</Button><button onClick={() => step(1)} aria-label="Следующий элемент">→</button></div></>
         : <button className="reopen-panel" onClick={() => setPanelOpen(true)}>Открыть карточку<br/><b>{part.name}</b></button>}
       </aside></section>
   </main>
 }
 
-function YurtDetail({ go, selected }: { go: (p: Page) => void; selected: PartKey }) {
+function YurtDetail({ go, selected, openNode }: { go: (p: Page) => void; selected: PartKey; openNode: (n: RelationNode) => void }) {
   const part = yurtParts[selected]
+  const linker = new Linker(useRelationLinks('yurt', selected) ?? [], openNode)
   return <main className="article-page"><button className="back" onClick={() => go('yurt')}>← Вернуться к экспозиции</button>
     <div className="article-hero detail-hero"><Lens k={selected} className="lens hero-lens"/><div><p className="kicker">ЭЛЕМЕНТ ЮРТЫ · {part.group.toUpperCase()}</p><h1>{part.name}</h1><p>{part.eyebrow}</p></div></div>
     <div className="article-body"><aside><b>КЫРГЫЗСКОЕ НАЗВАНИЕ</b><strong>{part.name}</strong><span>Элемент {part.no} из {partKeys.length}</span></aside>
-      <article><p className="big">{part.description}</p><h2>Назначение и устройство</h2><p>{part.purpose}</p><h2>Культурное значение</h2><p>{part.meaning}</p>
-        <div className="materials"><b>Связанные элементы</b>{part.related.map(r => <span key={r}>{r}</span>)}</div></article></div></main>
+      <article><p className="big">{linker.text(part.description)}</p><h2>Назначение и устройство</h2><p>{linker.text(part.purpose)}</p><h2>Культурное значение</h2><p>{linker.text(part.meaning)}</p>
+        <div className="materials"><b>Связанные элементы</b>{part.related.map(r => <span key={r}>{r}</span>)}</div>
+        <SeeAlso linker={linker} /></article></div></main>
 }
 
 export default function App() {
@@ -194,7 +203,15 @@ export default function App() {
   const [riteId,setRiteId]=useState<number|null>(null)
   const [folkloreRef,setFolkloreRef]=useState<FolkloreRef|null>(null)
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})}
-  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart} user={user}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId} user={user}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openItem={setFolkloreRef} user={user}/>:page==='quizzes'?<Quizzes user={user} go={go}/>:page==='rating'?<Rating user={user} goLogin={()=>go('login')}/>:page==='cabinet'?<Cabinet user={user} onUser={setUser} go={go} openRite={id=>{setRiteId(id);go('tradition-detail')}} openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}} openFolklore={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='admin'?<Admin user={user} goLogin={()=>go('login')}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
+  // Переход по связи (FR-3.3) в нужный раздел
+  const openNode=(n:RelationNode)=>{
+    if(n.kind==='rite'&&n.id!==null){setRiteId(n.id);go('tradition-detail')}
+    else if((n.kind==='hero'||n.kind==='work')&&n.id!==null){setFolkloreRef({kind:n.kind,id:n.id});go('folklore-detail')}
+    else if(n.kind==='yurt'&&n.key&&(partKeys as string[]).includes(n.key)){setPart(n.key as PartKey);go('yurt')}
+  }
+  // Выбран вариант в поиске (FR-4.1) - туда же
+  const openFound=(r:SearchResult)=>openNode({kind:r.kind,id:r.id,key:r.key,title:r.title,subtitle:r.subtitle,via:null})
+  const content=page==='home'?<Home go={go}/>:page==='yurt'?<Yurt go={go} selected={part} setSelected={setPart} user={user} openNode={openNode}/>:page==='yurt-detail'?<YurtDetail go={go} selected={part} openNode={openNode}/>:page==='traditions'?<Traditions openRite={id=>{setRiteId(id);go('tradition-detail')}}/>:page==='tradition-detail'?<TraditionDetail go={go} riteId={riteId} openNode={openNode} user={user}/>:page==='folklore'?<Folklore openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='folklore-detail'?<FolkloreDetail go={go} item={folkloreRef} openNode={openNode} user={user}/>:page==='quizzes'?<Quizzes user={user} go={go}/>:page==='rating'?<Rating user={user} goLogin={()=>go('login')}/>:page==='cabinet'?<Cabinet user={user} onUser={setUser} go={go} openRite={id=>{setRiteId(id);go('tradition-detail')}} openItem={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='editor'?<Editor user={user} goLogin={()=>go('login')} openRite={id=>{setRiteId(id);go('tradition-detail')}} openFolklore={r=>{setFolkloreRef(r);go('folklore-detail')}}/>:page==='admin'?<Admin user={user} goLogin={()=>go('login')}/>:<Auth mode={page as 'login'|'register'|'recover'|'reset'} go={go} onUser={setUser} resetToken={resetToken}/>
   const auth=['login','register','recover','reset'].includes(page)
-  return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout}/>} <Fragment key={lang}>{content}</Fragment> {!auth&&<Footer go={go}/>}<RewardToasts/></div>
+  return <div>{!auth&&<Header page={page} go={go} user={user} onLogout={doLogout} onFound={openFound}/>} <Fragment key={lang}>{content}</Fragment> {!auth&&<Footer go={go}/>}<RewardToasts/></div>
 }

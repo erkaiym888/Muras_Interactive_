@@ -4,6 +4,8 @@ import { trackView } from './Rewards'
 import { useEffect, useState } from 'react'
 import { fetchFolkloreDetail, fetchFolkloreItems, fetchFolkloreTypes } from './api'
 import type { FolkloreDetail as Detail, FolkloreItem, FolkloreKind, FolkloreType } from './api'
+import { Linker, SeeAlso, useRelationLinks } from './Relations'
+import type { OpenNode } from './Relations'
 
 export type FolkloreRef = { kind: FolkloreKind; id: number }
 type Status = 'loading' | 'ready' | 'error'
@@ -61,16 +63,17 @@ export function Folklore({ openItem }: { openItem: (ref: FolkloreRef) => void })
 }
 
 /** Карточка героя или произведения (FR-3.2): имя, тип, описание, связанные карточки, иллюстрации. */
-export function FolkloreDetail({ go, item, openItem, user }: {
+export function FolkloreDetail({ go, item, openNode, user }: {
   go: (p: 'folklore') => void
   item: FolkloreRef | null
-  openItem: (ref: FolkloreRef) => void
+  openNode: OpenNode
   user: User | null
 }) {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const kind = item?.kind
   const id = item?.id
+  const links = useRelationLinks(kind ?? 'hero', id ?? null)
 
   useEffect(() => {
     if (kind === undefined || id === undefined) { setStatus('error'); return }
@@ -92,6 +95,8 @@ export function FolkloreDetail({ go, item, openItem, user }: {
   }
 
   const paragraphs = (detail.description ?? '').split(/\n\s*\n/).filter(Boolean)
+  // Связи (FR-3.2, FR-3.3): упомянутые в тексте произведения, герои, обряды - ссылками
+  const linker = new Linker(links ?? [], openNode)
   const cover = detail.images[0]?.url
 
   return <main className="trad-detail">{back}
@@ -102,13 +107,7 @@ export function FolkloreDetail({ go, item, openItem, user }: {
     <div className="reading">
       <aside><p>Тип<br /><b>{detail.type}</b></p><p>Раздел<br /><b>{kindLabel(detail.kind)}</b></p></aside>
       <article>
-        {paragraphs.map((p, i) => <p className={i === 0 ? 'big' : undefined} key={i}>{p}</p>)}
-        {detail.related.length > 0 && <>
-          <h2>{detail.kind === 'hero' ? 'Связанные произведения' : 'Герои произведения'}</h2>
-          <div className="chips" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {detail.related.map(r => <button key={`${r.kind}-${r.id}`} onClick={() => openItem({ kind: r.kind, id: r.id })}>{r.title}</button>)}
-          </div>
-        </>}
+        {paragraphs.map((p, i) => <p className={i === 0 ? 'big' : undefined} key={i}>{linker.text(p)}</p>)}
         {detail.images.length > 0 && <>
           <h2>Иллюстрации</h2>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
@@ -118,6 +117,7 @@ export function FolkloreDetail({ go, item, openItem, user }: {
             </figure>)}
           </div>
         </>}
+        <SeeAlso linker={linker} />
       </article>
     </div>
   </main>
