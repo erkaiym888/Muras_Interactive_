@@ -1,5 +1,6 @@
 import { FavoriteButton } from './Favorite'
 import type { User } from './api'
+import { trackView } from './Rewards'
 import { useEffect, useState } from 'react'
 import { photos } from './data'
 import { fetchCategories, fetchRite, fetchRites } from './api'
@@ -88,7 +89,7 @@ export function TraditionDetail({ go, riteId, user }: { go: Go; riteId: number |
     let alive = true
     setStatus('loading')
     fetchRite(riteId)
-      .then(r => { if (alive) { setRite(r); setStatus('ready') } })
+      .then(r => { if (alive) { setRite(r); setStatus('ready'); trackView(user, 'RITE', r.id) } })
       .catch(() => alive && setStatus('error'))
     return () => { alive = false }
   }, [riteId])

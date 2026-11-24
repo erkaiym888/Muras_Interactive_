@@ -52,7 +52,8 @@ export const fetchRite = (id: number) => getJson<RiteDetail>(`/api/rites/${id}`)
 
 // ---------- Учётные записи (FR-6.1) ----------
 
-export type User = { id: number; email: string; displayName: string; role: string }
+/** avatarUrl - адрес аватара или null (FR-6.2) */
+export type User = { id: number; email: string; displayName: string; role: string; avatarUrl?: string | null }
 
 /** Ошибка от сервера: статус, ошибки по полям формы и общее сообщение. */
 export class ApiError extends Error {
@@ -275,6 +276,8 @@ export type AttemptResult = {
   points: PointLine[]
   questions: QuestionResult[]
   completedAt: string
+  newAchievements?: Achievement[]
+  levelUp?: Level | null
 }
 export type QuizHint = { available: boolean; text: string; hiddenOptionIds: number[]; revealedPairs: { optionId: number; match: string }[] }
 
@@ -340,13 +343,66 @@ export type CabinetHistoryItem = { attemptId: number; quizId: number; quizTitle:
 export type CabinetAward = { title: string; description: string; awardedAt: string }
 
 export type Cabinet = {
-  profile: { displayName: string; email: string; role: string; registeredAt: string; totalPoints: number }
+  profile: { displayName: string; email: string; role: string; avatarUrl: string | null; registeredAt: string; totalPoints: number }
   history: CabinetHistoryItem[]
   awards: CabinetAward[]
   favorites: Favorite[]
 }
 
 export const fetchCabinet = () => getAuthed<Cabinet>('/api/cabinet')
+
+// Редактирование профиля (FR-6.2): каждый запрос возвращает обновлённого пользователя
+export const updateDisplayName = (displayName: string) => send<User>('PATCH', '/api/cabinet/profile/name', { displayName })
+export const updateEmail = (email: string, currentPassword: string) =>
+  send<User>('PATCH', '/api/cabinet/profile/email', { email, currentPassword })
+export const uploadAvatar = (dataUrl: string) => send<User>('PUT', '/api/cabinet/profile/avatar', { dataUrl })
+export const deleteAvatar = () => send<User>('DELETE', '/api/cabinet/profile/avatar')
+
+// ---------- Награды: уровни и значки (FR-5.3) ----------
+
+export type Level = { number: number; title: string; minPoints: number; reward: string | null }
+export type Achievement = {
+  code: string
+  title: string
+  group: string
+  condition: string
+  bonus: number
+  icon: string | null
+  earned: boolean
+  awardedAt: string | null
+}
+export type Awards = {
+  totalPoints: number
+  level: Level
+  nextLevel: Level | null
+  pointsToNext: number
+  progressPercent: number
+  loginStreak: number
+  levels: Level[]
+  achievements: Achievement[]
+}
+export type RewardEvent = {
+  points: PointLine[]
+  pointsEarned: number
+  totalPoints: number
+  newAchievements: Achievement[]
+  levelUp: Level | null
+}
+export type ViewType = 'YURT_PART' | 'RITE' | 'HERO' | 'WORK' | 'SEARCH'
+
+export const fetchAwards = () => getAuthed<Awards>('/api/awards')
+export const postVisit = () => send<RewardEvent>('POST', '/api/activity/visit')
+export const postView = (type: ViewType, key: string | number) =>
+  send<RewardEvent>('POST', '/api/activity/view', { type, key: String(key) })
+
+// ---------- Рейтинг (FR-5.5) ----------
+
+export type RatingPeriod = 'all' | 'week'
+export type RatingRow = { place: number; displayName: string; level: number; levelTitle: string; points: number; me: boolean }
+export type Rating = { period: RatingPeriod; weekStart: string | null; weekEnd: string | null; participants: number; rows: RatingRow[]; me: RatingRow | null }
+
+export const fetchRating = (period: RatingPeriod) => getJson<Rating>(`/api/rating?period=${period}`)
+
 // ---------- Редактор: фольклор (FR-7.1) ----------
 
 export type EditorImage = { url: string; caption: string }
@@ -404,6 +460,8 @@ export type AdminUserRow = {
   id: number
   email: string
   displayName: string
+  /** аватар пользователя или null (FR-6.2) */
+  avatarUrl: string | null
   role: Role
   blocked: boolean
   totalPoints: number
