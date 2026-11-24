@@ -325,3 +325,4 @@
 .drawer .lang-switch button.active{background:var(--sand);border-color:var(--sand);color:var(--wine);font-weight:600}
 .drawer .lang-switch button:focus-visible{outline:2px solid var(--sand);outline-offset:2px}
 .lang-steps ol{list-style:decimal}
+.user-initial.photo{display:block;width:40px;height:40px;min-width:40px;max-width:40px;aspect-ratio:1;object-fit:cover;padding:0;border-radius:50%}

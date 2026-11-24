@@ -189,7 +189,7 @@ export default function App() {
   useEffect(()=>{initLanguages()},[])
   // При смене языка страница перезапрашивает данные, но остаётся той же (раздел, обряд, герой) - FR-8.2
   const {lang}=useI18n()
-  const doLogout=async()=>{try{await logout()}catch{/* всё равно считаем вышедшей */}finally{setUser(null);go('register')}}
+  const doLogout=async()=>{try{await logout()}catch{/* всё равно считаем вышедшей */}finally{setUser(null);go('login')}}
   const [part,setPart]=useState<PartKey>('tunduk')
   const [riteId,setRiteId]=useState<number|null>(null)
   const [folkloreRef,setFolkloreRef]=useState<FolkloreRef|null>(null)
